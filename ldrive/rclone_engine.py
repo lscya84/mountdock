@@ -1,11 +1,13 @@
-import subprocess
-import os
 import logging
-import psutil
+import os
+import subprocess
 import time
 from typing import Dict, List, Optional
 
+import psutil
+
 logger = logging.getLogger("RcloneEngine")
+
 
 class RcloneEngine:
     def __init__(self, rclone_path: str = "rclone.exe", rclone_conf_path: str = ""):
@@ -14,93 +16,144 @@ class RcloneEngine:
         self._active_mounts: Dict[str, subprocess.Popen] = {}
         self.last_err = ""
 
+    @property
+    def last_error(self) -> str:
+        return self.last_err
+
     def set_paths(self, rclone_path: str, rclone_conf_path: str):
         self.rclone_path = rclone_path
         self.rclone_conf_path = rclone_conf_path
 
-    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "", volname: str = "") -> Optional[subprocess.Popen]:
+    def mount(
+        self,
+        remote: str,
+        drive_letter: str,
+        vfs_mode: str = "full",
+        root_folder: str = "/",
+        custom_args: str = "",
+        volname: str = "",
+    ) -> Optional[subprocess.Popen]:
         self.last_err = ""
-        drive_path = f"{drive_letter.upper()}:"
-        self.unmount(drive_letter)
-        
-        remote_path = f"{remote}:" if root_folder == "/" else f"{remote}:{root_folder.lstrip('/')}"
-        volume_label = volname if volname else f"L-Drive ({remote})"
-        
-        # [사용자 강제 지침] CMD에서 성공한 방식을 그대로 복제 (단일 문자열 + shell=True)
-        cmd_str = f'"{self.rclone_path}" mount "{remote_path}" {drive_path} ' \
-                  f'--vfs-cache-mode {vfs_mode} ' \
-                  f'--volname "{volume_label}" --network-mode ' \
-                  f'--config "{self.rclone_conf_path}" --no-console'
-        
-        if custom_args:
-            cmd_str += f" {custom_args}"
+        letter = drive_letter.upper().replace(":", "")
+        drive_path = f"{letter}:"
+        self.unmount(letter)
+
+        remote_name = remote[:-1] if remote.endswith(":") else remote
+        remote_path = f"{remote_name}:" if root_folder == "/" else f"{remote_name}:{root_folder.lstrip('/')}"
+        volume_label = volname.strip() if volname.strip() else f"L-Drive ({remote_name})"
+
+        cmd = [
+            self.rclone_path,
+            "mount",
+            remote_path,
+            drive_path,
+            "--vfs-cache-mode",
+            vfs_mode,
+            "--volname",
+            volume_label,
+        ]
+
+        if self.rclone_conf_path:
+            cmd.extend(["--config", self.rclone_conf_path])
+
+        if custom_args.strip():
+            cmd.extend(self._split_custom_args(custom_args))
+
+        logger.info("마운트 실행: %s", subprocess.list2cmdline(cmd))
 
         try:
-            logger.info(f"마운트 실행 (Shell Mode): {cmd_str}")
-            
-            # shell=True를 사용하여 CMD 직접 입력과 동일한 환경 제공
             process = subprocess.Popen(
-                cmd_str,
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP,
-                encoding='utf-8',
-                errors='replace',
-                shell=True
+                shell=False,
             )
-            
-            # 조기 종료 시 0.5초 안에 에러 메시지 캡처
-            time.sleep(0.5)
+
+            time.sleep(1.2)
             if process.poll() is not None:
-                self.last_err = process.stderr.read().strip()
-                logger.error(f"마운트 즉시 실패: {self.last_err}")
+                stdout, stderr = process.communicate(timeout=1)
+                self.last_err = (stderr or stdout or "rclone mount exited immediately").strip()
+                logger.error("마운트 즉시 실패: %s", self.last_err)
                 return None
-            
-            self._active_mounts[drive_letter] = process
+
+            self._active_mounts[letter] = process
             return process
-            
-        except Exception as e:
-            self.last_err = str(e)
-            logger.error(f"프로세스 시작 에러: {e}")
+        except Exception as exc:
+            self.last_err = str(exc)
+            logger.error("마운트 프로세스 시작 실패: %s", exc)
             return None
 
     def is_process_alive(self, drive_letter: str) -> bool:
-        if drive_letter not in self._active_mounts: return False
-        proc = self._active_mounts[drive_letter]
+        letter = drive_letter.upper().replace(":", "")
+        proc = self._active_mounts.get(letter)
+        if not proc:
+            return False
+
         if proc.poll() is not None:
             try:
-                err = proc.stderr.read().strip()
-                if err: self.last_err = err
-            except: pass
+                stdout, stderr = proc.communicate(timeout=1)
+                self.last_err = (stderr or stdout or "").strip()
+            except Exception:
+                pass
+            self._active_mounts.pop(letter, None)
             return False
         return True
 
     def unmount(self, drive_letter: str) -> bool:
-        drive_path = f"{drive_letter.upper()}:"
-        if drive_letter in self._active_mounts:
-            proc = self._active_mounts[drive_letter]
-            try:
-                p = psutil.Process(proc.pid)
-                for child in p.children(recursive=True): child.kill()
-                p.kill()
-            except: pass
-            del self._active_mounts[drive_letter]
-        
+        letter = drive_letter.upper().replace(":", "")
+        drive_path = f"{letter}:"
+
+        proc = self._active_mounts.pop(letter, None)
+        if proc is not None:
+            self._kill_process_tree(proc.pid)
+
         try:
-            for p in psutil.process_iter(['name', 'cmdline']):
-                if p.info['name'] == 'rclone.exe' and drive_path in (p.info['cmdline'] or []):
-                    p.kill()
-        except: pass
+            for process in psutil.process_iter(["name", "cmdline"]):
+                cmdline = process.info.get("cmdline") or []
+                if process.info.get("name", "").lower() == "rclone.exe" and drive_path in cmdline:
+                    self._kill_process_tree(process.pid)
+        except Exception:
+            pass
         return True
 
     def get_remotes(self) -> List[str]:
+        cmd = [self.rclone_path, "listremotes"]
+        if self.rclone_conf_path:
+            cmd.extend(["--config", self.rclone_conf_path])
+
         try:
-            cmd = f'"{self.rclone_path}" listremotes'
-            if self.rclone_conf_path:
-                cmd += f' --config "{self.rclone_conf_path}"'
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=False)
             if result.returncode == 0:
-                return [line.strip().replace(":", "") for line in result.stdout.splitlines() if line.strip()]
+                return [line.strip().rstrip(":") for line in result.stdout.splitlines() if line.strip()]
+            self.last_err = (result.stderr or result.stdout or "failed to list remotes").strip()
+            logger.error("리모트 목록 로드 실패: %s", self.last_err)
             return []
-        except: return []
+        except Exception as exc:
+            self.last_err = str(exc)
+            logger.error("리모트 목록 로드 실패: %s", exc)
+            return []
+
+    def kill_all_mounts(self):
+        for drive_letter in list(self._active_mounts.keys()):
+            self.unmount(drive_letter)
+
+    def _kill_process_tree(self, pid: int):
+        try:
+            parent = psutil.Process(pid)
+            for child in parent.children(recursive=True):
+                child.kill()
+            parent.kill()
+        except Exception:
+            pass
+
+    def _split_custom_args(self, custom_args: str) -> List[str]:
+        import shlex
+
+        try:
+            return shlex.split(custom_args, posix=False)
+        except ValueError:
+            return custom_args.split()
