@@ -1,115 +1,106 @@
-/* Designer SaaS Light Theme - iOS/Toss Style */
+/* Native Windows 11 Style Light Theme */
 QWidget {
-    background-color: #F0F2F5; /* Global Background */
-    color: #1D1D1F; /* Deep Black Text */
-    font-family: 'Segoe UI Variable Text', -apple-system, system-ui, sans-serif;
+    background-color: #F3F3F3; /* Windows 11 Page Background */
+    color: #000000;
+    font-family: 'Segoe UI Variable Text', -apple-system, sans-serif;
     font-size: 10pt;
 }
 
 QMainWindow {
-    background-color: #F0F2F5;
+    background-color: #F3F3F3;
 }
 
 #AppLogo {
-    font-size: 15pt;
-    font-weight: 800;
-    color: #007AFF; /* iOS Blue */
-    letter-spacing: -0.5px;
-}
-
-/* Card Style */
-#DriveCard {
-    background-color: #FFFFFF;
-    border: 1px solid #D1D1D6;
-    border-radius: 14px;
-    /* Subtle Shadow hint can be added here if needed */
-}
-
-/* Round Circle Icon */
-#LetterCircle {
-    background-color: #EBF5FF;
-    color: #007AFF;
-    border-radius: 22px;
+    font-size: 14pt;
     font-weight: 700;
-    font-size: 13pt;
-    border: 1px solid #C7E0FF;
+    color: #000000;
 }
 
-/* Main Text Hierarchies */
+/* Row Styling (Windows Settings Card) */
+#DriveRow {
+    background-color: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 6px;
+}
+
+#LetterIcon {
+    background-color: #F8F8F8;
+    color: #444444;
+    border-radius: 4px;
+    font-weight: 700;
+    border: 1px solid #EDEDED;
+}
+
 #DriveTitle {
-    font-size: 11pt;
-    font-weight: 700;
-    color: #1D1D1F;
-}
-
-#StatusDisconnected { color: #FF9500; font-weight: 600; font-size: 8pt; }
-#StatusConnected { color: #34C759; font-weight: 600; font-size: 8pt; }
-
-/* Buttons Style */
-QPushButton {
-    border-radius: 8px;
     font-weight: 600;
-    padding: 6px 14px;
-    border: none;
+    font-size: 10pt;
+    color: #1A1A1A;
 }
 
-/* Primary Action Colors */
-QPushButton#MountButton {
-    background-color: #007AFF;
-    color: white;
-}
-
-QPushButton#MountButton:hover { background-color: #0066CC; }
-
-/* Unmount State Color through Property */
-QPushButton#MountButton[isUnmount="true"] {
-    background-color: #FF3B30; /* iOS Red */
-}
-
-QPushButton#MountButton[isUnmount="true"]:hover {
-    background-color: #D72C21;
-}
-
-/* Ghost Buttons (Settings, Delete, etc) */
-QPushButton#GhostButton {
-    background-color: #EDF1F7;
-    color: #4A4A4F;
-    border: 1px solid #D1D1D6;
-    padding: 4px 10px;
-}
-
-QPushButton#GhostButton:hover {
-    background-color: #DDE4EE;
-    color: #1D1D1F;
-}
-
-/* Logs */
-#CompactLog {
-    background-color: #FFFFFF;
-    border: 1px solid #D1D1D6;
-    border-radius: 10px;
-    font-family: 'Consolas', monospace;
+#StatusLabel {
     font-size: 8.5pt;
-    color: #4A4A4F;
-    padding: 5px;
+    color: #616161;
 }
 
-/* ScrollArea cleanup */
-QScrollArea { border: none; background: transparent; }
-QScrollBar:vertical {
+/* Primary Windows Buttons */
+QPushButton#PrimaryButton {
+    background-color: #0067C0;
+    color: #FFFFFF;
+    border-radius: 4px;
+    font-weight: 600;
     border: none;
-    background: transparent;
-    width: 6px;
-    border-radius: 3px;
+    padding: 6px 16px;
 }
-QScrollBar::handle:vertical {
-    background: #C7C7CC;
-    border-radius: 3px;
+
+QPushButton#PrimaryButton:hover {
+    background-color: #1975C5;
+}
+
+/* Mount Action Button */
+QPushButton#MountButton {
+    background-color: #0067C0;
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
+    border: none;
+}
+
+QPushButton#MountButton[isUnmount="true"] {
+    background-color: #C42B1C;
+}
+
+QPushButton#MountButton:hover {
+    opacity: 0.9;
+}
+
+/* Grey Secondary Buttons */
+QPushButton#SecondaryButton {
+    background-color: #FFFFFF;
+    color: #1A1A1A;
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+QPushButton#SecondaryButton:hover {
+    background-color: #EEEEEE;
+}
+
+/* System Logs */
+#SystemLog {
+    background-color: #FFFFFF;
+    border: 1px solid #E0E0E0;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 8pt;
+    color: #616161;
 }
 
 QLineEdit, QComboBox {
     background-color: #FFFFFF;
-    border: 1px solid #D1D1D6;
-    border-radius: 6px;
-    padding: 5px;
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    padding: 4px;
 }
+
+QScrollArea { border: none; background: transparent; }
