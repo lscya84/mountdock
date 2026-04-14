@@ -6,181 +6,194 @@ from PyQt6.QtGui import QIcon, QAction
 
 from ldrive.config_manager import ConfigManager
 from ldrive.rclone_engine import RcloneEngine
-from ldrive.ui_components import LDriveMainWindow, LDriveTrayIcon
+from ldrive.ui_components import LDriveMainWindow, LDriveTrayIcon, DriveCardWidget, DriveSettingsDialog
 from ldrive.watcher import LDriveWatcher
 
-# 로거 설정 (이미 ConfigManager에서 설정됨)
+# 로거 설정
 logger = logging.getLogger("Main")
 
 class LDriveApp:
     """
-    L-Drive Pro 전체 애플리케이션의 흐름을 관장하는 메인 컨트롤러 클래스입니다.
+    RaiDrive 스타일의 다중 마운트 대시보드를 관리하는 메인 앱 클래스입니다.
     """
     def __init__(self):
         self.app = QApplication(sys.argv)
-        self.app.setQuitOnLastWindowClosed(False) # 창을 닫아도 프로세스 종료 방지 (트레이 유지)
+        self.app.setQuitOnLastWindowClosed(False)
 
-        # 1. 코어 엔진 초기화
+        # 1. 코어 초기화
         self.config = ConfigManager()
         self.engine = RcloneEngine(self.config.get("rclone_path", "rclone.exe"))
         
         # 2. UI 초기화
         self.window = LDriveMainWindow()
         
-        # 아이콘 설정
         icon_path = LDriveMainWindow.resource_path(os.path.join("assets", "icon.ico"))
-        if os.path.exists(icon_path):
-            self.default_icon = QIcon(icon_path)
-        else:
-            # 아이콘이 없는 경우 시스템 표준 아이콘 사용
-            self.default_icon = self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
-        
+        self.default_icon = QIcon(icon_path) if os.path.exists(icon_path) else self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
         self.window.setWindowIcon(self.default_icon)
         
         self.tray = LDriveTrayIcon(self.default_icon)
         self.tray.show()
 
-        # 3. 런타임 변수
-        self.watcher = None
+        # 3. 다중 스레드 관리 (Key: Profile ID)
+        self.watchers = {}
 
-        # 4. 앱 초기 설정 및 바인딩
-        self._setup_ui_data()
+        # 4. 앱 바인딩
         self._wire_signals()
-
-        # 마운트 버튼 초기 상태 제어
-        self.window.unmount_btn.setEnabled(False)
-
-    def _setup_ui_data(self):
-        """저장된 설정값을 UI에 반영합니다."""
-        # 리모트 목록 로드
-        remotes = self.engine.get_remotes()
-        if remotes:
-            self.window.remote_combo.addItems(remotes)
-            # 마지막 사용 리모트 선택
-            last_remote = self.config.get("last_mount_remote")
-            if last_remote in remotes:
-                self.window.remote_combo.setCurrentText(last_remote)
-        else:
-            self.window.append_log("등록된 Rclone 리모트가 없습니다. rclone config로 먼저 등록해주세요.")
-
-        # 드라이브 문자 선택
-        last_letter = self.config.get("last_drive_letter")
-        index = self.window.drive_combo.findText(f"{last_letter}:")
-        if index >= 0:
-            self.window.drive_combo.setCurrentIndex(index)
-
-        # VFS 모드 선택
-        last_vfs = self.config.get("vfs_mode")
-        if last_vfs == "writes":
-            self.window.radio_work.setChecked(True)
-        else:
-            self.window.radio_media.setChecked(True)
-
-        # 자동 실행 체크박스
+        self._setup_dashboards()
+        
+        # 설정 로드
         self.window.auto_start_check.setChecked(self.config.get("auto_start", False))
 
     def _wire_signals(self):
-        """UI 이벤트와 비즈니스 로직을 연결합니다."""
-        # 메인 버튼
-        self.window.mount_btn.clicked.connect(self.handle_mount)
-        self.window.unmount_btn.clicked.connect(self.handle_unmount)
-        
-        # 체크박스 (자동 실행 설정)
+        """글로벌 시그널 연결"""
+        self.window.add_requested.connect(self.handle_add_drive)
         self.window.auto_start_check.stateChanged.connect(
             lambda state: self.config.set_auto_start(state == 2)
         )
-
-        # 트레이 신호
-        self.tray.show_requested.connect(self.show_window)
-        self.tray.unmount_requested.connect(self.handle_unmount)
+        
+        self.tray.show_requested.connect(self._show_window)
         self.tray.exit_requested.connect(self.exit_app)
         
-        # 메인 창 닫기 이벤트 오버라이딩 (트레이로 숨기기)
+        # 창 숨기기 로직
         self.window.closeEvent = self._on_close_event
 
-    def _on_close_event(self, event):
-        """X 버튼 클릭 시 종료하지 않고 트레이로 숨깁니다."""
-        # 사용자가 수동으로 종료(Exit)를 누른 게 아니라면 숨기기
-        if self.window.isVisible():
-            self.window.hide()
-            self.tray.showMessage(
-                "L-Drive Pro",
-                "프로그램이 트레이에서 실행 중입니다.",
-                QSystemTrayIcon.MessageIcon.Information,
-                2000
-            )
-            event.ignore()
-
-    def show_window(self):
-        """창을 화면에 띄우고 포커스를 줍니다."""
+    def _show_window(self):
         self.window.show()
         self.window.raise_()
         self.window.activateWindow()
 
-    def handle_mount(self):
-        """사용자 입력을 바탕으로 마운트를 시도하고 감시자를 실행합니다."""
-        remote = self.window.remote_combo.currentText()
-        drive_letter = self.window.drive_combo.currentText().replace(":", "")
-        vfs_mode = "full" if self.window.radio_media.isChecked() else "writes"
+    def _on_close_event(self, event):
+        if self.window.isVisible():
+            self.window.hide()
+            self.tray.showMessage("L-Drive Pro", "대시보드가 트레이로 숨겨졌습니다.", QSystemTrayIcon.MessageIcon.Information, 1500)
+            event.ignore()
 
-        if not remote:
-            QMessageBox.warning(self.window, "경고", "마운트할 리모트를 선택해주세요.")
+    def _setup_dashboards(self):
+        """저장된 모든 프로필을 대시보드 카드로 생성합니다."""
+        self.window.clear_cards()
+        profiles = self.config.get_profiles()
+        
+        for profile in profiles:
+            card = DriveCardWidget(profile)
+            # 카드 시그널 연결
+            card.toggle_requested.connect(self.handle_toggle_mount)
+            card.edit_requested.connect(self.handle_edit_drive)
+            card.delete_requested.connect(self.handle_delete_drive)
+            
+            # 이미 다른 곳에서 마운트된 적이 있는지 등은 추후 체크 가능
+            self.window.add_card(card)
+            
+        self.window.append_log(f"대시보드 로드 완료: {len(profiles)}개의 드라이브")
+
+    def handle_add_drive(self):
+        """새 드라이브 추가 다이얼로그 실행"""
+        remotes = self.engine.get_remotes()
+        dialog = DriveSettingsDialog(remotes, self.window)
+        
+        if dialog.exec():
+            new_data = dialog.get_data()
+            self.config.add_profile(new_data)
+            self._setup_dashboards()
+            self.window.append_log(f"새 드라이브 추가됨: {new_data['remote']}")
+
+    def handle_edit_drive(self, profile_id):
+        """기존 드라이브 설정 수정"""
+        profiles = self.config.get_profiles()
+        profile = next((p for p in profiles if p["id"] == profile_id), None)
+        if not profile: return
+
+        if profile_id in self.watchers:
+            QMessageBox.warning(self.window, "경고", "마운트 중에는 설정을 수정할 수 없습니다. 먼저 중지해주세요.")
             return
 
-        self.window.append_log(f"마운트 시도 중: {remote} -> {drive_letter}:")
+        remotes = self.engine.get_remotes()
+        dialog = DriveSettingsDialog(remotes, self.window, profile=profile)
         
-        if self.engine.mount(remote, drive_letter, vfs_mode):
-            # 성공 시 설정 저장
-            self.config.set("last_mount_remote", remote)
-            self.config.set("last_drive_letter", drive_letter)
-            self.config.set("vfs_mode", vfs_mode)
+        if dialog.exec():
+            updated_data = dialog.get_data()
+            self.config.update_profile(profile_id, updated_data)
+            self._setup_dashboards()
+            self.window.append_log(f"설정 수정됨: {updated_data['remote']}")
+
+    def handle_delete_drive(self, profile_id):
+        """드라이브 삭제"""
+        reply = QMessageBox.question(self.window, "삭제 확인", "정말로 이 드라이브를 삭제하시겠습니까?", 
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # 실행 중이면 중지
+            if profile_id in self.watchers:
+                self.handle_toggle_mount(profile_id, False)
             
-            # Watcher 시작
-            self._start_watcher(remote, drive_letter, vfs_mode)
+            self.config.delete_profile(profile_id)
+            self._setup_dashboards()
+            self.window.append_log("드라이브 프로필이 삭제되었습니다.")
+
+    def handle_toggle_mount(self, profile_id, should_start):
+        """개별 드라이브의 시작/중지를 처리합니다."""
+        profiles = self.config.get_profiles()
+        profile = next((p for p in profiles if p["id"] == profile_id), None)
+        if not profile: return
+
+        # 해당 카드를 찾기 위해 레이아웃 순회
+        card = self._find_card_by_id(profile_id)
+
+        if should_start:
+            # 마운트 시작
+            self.window.append_log(f"[{profile['remote']}] 마운트 시도 중...")
+            success = self.engine.mount(
+                remote=profile["remote"],
+                drive_letter=profile["letter"],
+                vfs_mode=profile["vfs_mode"],
+                root_folder=profile["root_folder"],
+                custom_args=profile["custom_args"]
+            )
             
-            # UI 상태 변경
-            self.window.mount_btn.setEnabled(False)
-            self.window.unmount_btn.setEnabled(True)
-            self.window.set_status("Connected")
+            if success:
+                # Watcher 생성
+                watcher = LDriveWatcher(
+                    self.engine, profile["remote"], profile["letter"], 
+                    profile["vfs_mode"], profile["root_folder"], profile["custom_args"]
+                )
+                # 시그널 연결 (가장 중요: 특정 카드의 상태만 업데이트해야 함)
+                if card:
+                    watcher.status_changed.connect(card.set_status)
+                watcher.log_emitted.connect(self.window.append_log)
+                
+                watcher.start()
+                self.watchers[profile_id] = watcher
+                if card: card.set_status("Connected")
+            else:
+                QMessageBox.critical(self.window, "에러", f"{profile['remote']} 마운트 실행에 실패했습니다.")
         else:
-            self.window.append_log("마운트 실패! 로그를 확인하세요.")
-            QMessageBox.critical(self.window, "오류", "마운트 실행 중 오류가 발생했습니다.")
+            # 마운트 중지
+            self.window.append_log(f"[{profile['remote']}] 마운트 해제 중...")
+            if profile_id in self.watchers:
+                self.watchers[profile_id].stop()
+                del self.watchers[profile_id]
+            
+            self.engine.unmount(profile["letter"])
+            if card: card.set_status("Disconnected")
 
-    def _start_watcher(self, remote, drive_letter, vfs_mode):
-        """연결 감시 스레드를 생성하고 시작합니다."""
-        if self.watcher:
-            self.watcher.stop()
-        
-        self.watcher = LDriveWatcher(self.engine, remote, drive_letter, vfs_mode)
-        self.watcher.status_changed.connect(self.window.set_status)
-        self.watcher.log_emitted.connect(self.window.append_log)
-        self.watcher.start()
-
-    def handle_unmount(self):
-        """현재 마운트된 드라이브를 해제하고 감시자를 중지합니다."""
-        if self.watcher:
-            self.watcher.stop()
-            self.watcher = None
-
-        drive_letter = self.window.drive_combo.currentText().replace(":", "")
-        self.window.append_log(f"마운트 해제 시도 중: {drive_letter}:")
-        
-        self.engine.unmount(drive_letter)
-        
-        # UI 상태 복구
-        self.window.mount_btn.setEnabled(True)
-        self.window.unmount_btn.setEnabled(False)
-        self.window.set_status("Disconnected")
-        self.window.append_log("마운트 해제 완료.")
+    def _find_card_by_id(self, profile_id):
+        """UI 레이아웃에서 특정 ID를 가진 카드를 찾습니다."""
+        for i in range(self.window.card_layout.count()):
+            widget = self.window.card_layout.itemAt(i).widget()
+            if isinstance(widget, DriveCardWidget) and widget.profile["id"] == profile_id:
+                return widget
+        return None
 
     def exit_app(self):
-        """애플리케이션을 완전히 종료합니다."""
-        logger.info("애플리케이션 종료 절차 시작...")
+        """앱 완전 종료 절차"""
+        self.window.append_log("시스템 종료 중... 모든 드라이브를 정리합니다.")
         
-        if self.watcher:
-            self.watcher.stop()
+        # 1. 모든 감시 스레드 중지
+        for wid in list(self.watchers.keys()):
+            self.watchers[wid].stop()
         
+        # 2. 모든 rclone 프로세스 Kill
         self.engine.kill_all_mounts()
+        
         self.app.quit()
 
     def run(self):
