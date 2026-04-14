@@ -44,7 +44,11 @@ class LDriveApp:
         self._wire_signals()
         self._setup_dashboards()
         
-        # 5. 실행 모드 (트레이 모드 시작 여부)
+        # 5. 초기 테마 적용
+        current_theme = self.config.get("theme", "light")
+        self.window._apply_styles(current_theme)
+
+        # 6. 실행 모드 (트레이 모드 시작 여부)
         if self.config.get("start_minimized"):
             self.window.hide()
             self.tray.showMessage("L-Drive Pro", "앱이 트레이 모드로 시작되었습니다.", QSystemTrayIcon.MessageIcon.Information, 1500)
@@ -58,11 +62,24 @@ class LDriveApp:
         """글로벌 시그널 연결"""
         self.window.add_requested.connect(self.handle_add_drive)
         self.window.settings_requested.connect(self.handle_settings)
+        self.window.theme_toggle_requested.connect(self.handle_theme_toggle)
         
         self.tray.show_requested.connect(self._show_window)
         self.tray.exit_requested.connect(self.exit_app)
         
         self.window.closeEvent = self._on_close_event
+
+    def handle_theme_toggle(self):
+        """라이트/다크 테마를 실시간으로 전환합니다."""
+        current_theme = self.config.get("theme", "light")
+        new_theme = "dark" if current_theme == "light" else "light"
+        
+        # UI 적용
+        self.window._apply_styles(new_theme)
+        
+        # 설정 저장
+        self.config.set("theme", new_theme)
+        self.window.append_log(f"테마가 {new_theme} 모드로 전환되었습니다.")
 
     def _show_window(self):
         self.window.show()

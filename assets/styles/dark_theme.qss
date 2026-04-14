@@ -23,16 +23,11 @@ QGroupBox::title {
     subcontrol-origin: margin;
     left: 10px;
     padding: 0 3px 0 3px;
+    background-color: #121212;
 }
 
 QLabel {
     color: #b0b0b0;
-}
-
-#StatusLabel {
-    font-size: 11pt;
-    font-weight: bold;
-    color: #ff9800; /* Orange for Disconnected by default */
 }
 
 QLineEdit, QComboBox, QPlainTextEdit {
@@ -53,7 +48,7 @@ QPushButton {
     border-radius: 6px;
     padding: 10px;
     font-weight: bold;
-    min-height: 20px;
+    color: white;
 }
 
 QPushButton:hover {
@@ -78,35 +73,22 @@ QPushButton:hover {
     background-color: #d32f2f;
 }
 
-QRadioButton::indicator {
-    width: 13px;
-    height: 13px;
-}
-
-QCheckBox::indicator {
-    width: 15px;
-    height: 15px;
-}
-
-QScrollBar:vertical {
+#IconButton {
+    background-color: transparent;
     border: none;
-    background: #1e1e1e;
-    width: 10px;
-    margin: 0px;
+    font-size: 14pt;
 }
 
-QScrollBar::handle:vertical {
-    background: #3d3d3d;
-    min-height: 20px;
-    border-radius: 5px;
+#IconButton:hover {
+    background-color: #333333;
+    border-radius: 4px;
 }
 
-/* DriveCardWidget Styles */
+/* DriveCard Styles */
 #DriveCard {
     background-color: #252525;
     border: 1px solid #3d3d3d;
-    border-radius: 10px;
-    margin: 5px;
+    border-radius: 12px;
 }
 
 #DriveCard:hover {
@@ -114,13 +96,13 @@ QScrollBar::handle:vertical {
 }
 
 #DriveCardTitle {
-    font-size: 12pt;
+    font-size: 11pt;
     font-weight: bold;
     color: #ffffff;
 }
 
 #DriveCardLetter {
-    font-size: 14pt;
+    font-size: 13pt;
     font-weight: bold;
     color: #4a9eff;
 }
@@ -129,17 +111,19 @@ QScrollBar::handle:vertical {
 #StatusConnected { color: #4caf50; font-weight: bold; }
 #StatusReconnecting { color: #ffc107; font-weight: bold; }
 
-/* Dialog Styles */
-QDialog {
-    background-color: #1e1e1e;
-}
-
-#IconButton {
+QScrollArea {
+    border: none;
     background-color: transparent;
-    padding: 5px;
 }
 
-#IconButton:hover {
-    background-color: #3d3d3d;
+QScrollBar:vertical {
+    border: none;
+    background: #1e1e1e;
+    width: 8px;
+}
+
+QScrollBar::handle:vertical {
+    background: #3d3d3d;
+    min-height: 20px;
     border-radius: 4px;
 }

@@ -251,13 +251,13 @@ class LDriveMainWindow(QMainWindow):
     """
     add_requested = pyqtSignal()
     settings_requested = pyqtSignal()
+    theme_toggle_requested = pyqtSignal() # 테마 토글 시그널 추가
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("L-Drive Pro - Dashboard")
         self.setFixedSize(600, 750)
         self._init_ui()
-        self._apply_styles()
 
     def _init_ui(self):
         central = QWidget()
@@ -267,8 +267,13 @@ class LDriveMainWindow(QMainWindow):
         # 헤더
         header = QHBoxLayout()
         title = QLabel("L-Drive Pro")
+        title.setObjectName("AppTitle")
         title.setStyleSheet("font-size: 20pt; font-weight: bold; color: #3498db;")
         
+        self.theme_btn = QPushButton("🌙 Dark") # 초기값 (main에서 갱신됨)
+        self.theme_btn.setFixedWidth(80)
+        self.theme_btn.clicked.connect(self.theme_toggle_requested.emit)
+
         self.settings_btn = QPushButton("⚙ Settings")
         self.settings_btn.setFixedWidth(100)
         self.settings_btn.clicked.connect(self.settings_requested.emit)
@@ -280,6 +285,7 @@ class LDriveMainWindow(QMainWindow):
         
         header.addWidget(title)
         header.addStretch()
+        header.addWidget(self.theme_btn)
         header.addWidget(self.settings_btn)
         header.addWidget(self.add_btn)
         main_layout.addLayout(header)
@@ -314,11 +320,22 @@ class LDriveMainWindow(QMainWindow):
     def add_card(self, card_widget):
         self.card_layout.addWidget(card_widget)
 
-    def _apply_styles(self):
-        qss_path = self.resource_path(os.path.join("assets", "styles", "light_theme.qss"))
+    def _apply_styles(self, theme_name="light"):
+        """지정된 테마 파일(.qss)을 로드하여 적용합니다."""
+        filename = f"{theme_name}_theme.qss"
+        qss_path = self.resource_path(os.path.join("assets", "styles", filename))
+        
         if os.path.exists(qss_path):
             with open(qss_path, "r", encoding="utf-8") as f:
                 self.setStyleSheet(f.read())
+            
+            # 버튼 텍스트 변경
+            if theme_name == "dark":
+                self.theme_btn.setText("☀️ Light")
+            else:
+                self.theme_btn.setText("🌙 Dark")
+        else:
+            print(f"Warning: Stylesheet not found at {qss_path}")
 
     @staticmethod
     def resource_path(relative_path):
