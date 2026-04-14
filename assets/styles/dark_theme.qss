@@ -34,28 +34,30 @@ QMainWindow {
 #DriveTitle { font-weight: 600; }
 #StatusLabel { color: #BBBBBB; }
 
-/* Buttons */
-QPushButton#AccentButton {
-    background-color: #60CDFF; /* Win11 Dark Accent */
-    color: #000000;
+QPushButton {
     border-radius: 6px;
     font-weight: 700;
 }
 
-QPushButton#AccentButton:hover { background-color: #4CB9EA; }
-
-QPushButton#AccentButton[isUnmount="true"] {
-    background-color: #FF99A4; /* Dark State Red */
-    color: #000000;
+#AccentButton {
+    background-color: #60CDFF !important;
+    color: #000000 !important;
 }
 
-QPushButton#SubButton {
-    background-color: #333333;
-    color: #FFFFFF;
-    border-radius: 6px;
+#MountBtn {
+    background-color: #60CDFF !important;
+    color: #000000 !important;
 }
 
-QPushButton#SubButton:hover { background-color: #3E3E3E; }
+#UnmountBtn {
+    background-color: #FF99A4 !important;
+    color: #000000 !important;
+}
+
+#SubButton {
+    background-color: #333333 !important;
+    color: #FFFFFF !important;
+}
 
 #ActivityLogDisplay {
     background-color: #1A1A1A;

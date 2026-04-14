@@ -16,11 +16,11 @@ QMainWindow {
     color: #000000;
 }
 
-/* Row Style: Windows Settings Card */
+/* Card Style: Elevation and Borders */
 #DriveCard {
     background-color: #FFFFFF;
     border: 1px solid #E5E5E5;
-    border-bottom: 2px solid #D1D1D1; /* Subtle Shadow */
+    border-bottom: 2px solid #D1D1D1;
     border-radius: 8px;
 }
 
@@ -44,51 +44,45 @@ QMainWindow {
     color: #5F5F5F;
 }
 
-/* Fluent Action Buttons - Accent */
-QPushButton#AccentButton {
-    background-color: #0067C0;
-    color: #FFFFFF;
-    border-radius: 6px;
-    font-weight: 700;
-    border: none;
-    padding: 6px 14px;
-}
-
-QPushButton#AccentButton:hover {
-    background-color: #1975C5;
-}
-
-QPushButton#AccentButton:pressed {
-    background-color: #004D9E;
-    /* Subtle scaling effect simulated by padding if needed, but standard is better */
-}
-
-/* State Change Color via Property */
-QPushButton#AccentButton[isUnmount="true"] {
-    background-color: #C42B1C; /* Windows Red */
-}
-
-QPushButton#AccentButton[isUnmount="true"]:hover {
-    background-color: #A82318;
-}
-
-/* Secondary / Sub Buttons */
-QPushButton#SubButton {
-    background-color: #E5E5E5;
-    color: #000000;
-    border: none;
+/* ALL Buttons Must have Explicit Backgrounds */
+QPushButton {
     border-radius: 6px;
     font-weight: 600;
-    padding: 4px 10px;
+    padding: 6px 14px;
+    border: none;
 }
 
-QPushButton#SubButton:hover {
-    background-color: #D5D5D5;
+/* Accent Button (Top Add, Dialog Save) */
+#AccentButton {
+    background-color: #0067C0 !important;
+    color: #FFFFFF !important;
 }
 
-QPushButton#SubButton:pressed {
-    background-color: #C5C5C5;
+#AccentButton:hover { background-color: #1975C5 !important; }
+
+/* Mount Button (Blue) */
+#MountBtn {
+    background-color: #0067C0 !important;
+    color: #FFFFFF !important;
 }
+
+#MountBtn:hover { background-color: #1975C5 !important; }
+
+/* Unmount Button (Red) */
+#UnmountBtn {
+    background-color: #C42B1C !important;
+    color: #FFFFFF !important;
+}
+
+#UnmountBtn:hover { background-color: #A82318 !important; }
+
+/* Secondary / Sub Buttons (Grey) */
+#SubButton {
+    background-color: #E5E5E5 !important;
+    color: #000000 !important;
+}
+
+#SubButton:hover { background-color: #D5D5D5 !important; }
 
 /* Log Display */
 #ActivityLogDisplay {
@@ -111,9 +105,6 @@ QScrollBar:vertical {
 QScrollBar::handle:vertical {
     background: #CCCCCC;
     border-radius: 5px;
-}
-QScrollBar::handle:vertical:hover {
-    background: #AAAAAA;
 }
 
 QLineEdit, QComboBox {
