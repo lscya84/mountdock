@@ -1,115 +1,123 @@
-/* Fluent Design Light Theme - Windows 11 Style */
+/* Native Windows 11 Fluent Light Theme v3.0 */
 QWidget {
-    background-color: #F3F3F3;
-    color: #000000;
+    background-color: #F9FAFB; /* Soft Neutral Background */
+    color: #1A1A1A;
     font-family: 'Segoe UI Variable Text', 'Malgun Gothic', sans-serif;
     font-size: 10pt;
 }
 
 QMainWindow {
-    background-color: #F3F3F3;
+    background-color: #F9FAFB;
 }
 
-#AppTitleHeader {
-    font-size: 14pt;
-    font-weight: 700;
-    color: #000000;
+#MainLogo {
+    font-size: 18pt;
+    font-weight: 800;
+    color: #1A1A1A;
+    letter-spacing: -0.5px;
 }
 
-/* Card Style: Elevation and Borders */
+/* Elevated Row Card */
 #DriveCard {
     background-color: #FFFFFF;
-    border: 1px solid #E5E5E5;
-    border-bottom: 2px solid #D1D1D1;
-    border-radius: 8px;
+    border: 1px solid #E0E3E7;
+    border-bottom: 3px solid #D9DEE4; /* Simulated Fluent Shadow */
+    border-radius: 12px;
 }
 
-#LetterBox {
-    background-color: #F9F9F9;
+/* RoundedBadge Icon */
+#LetterBadge {
+    background-color: #EEF2F6;
     color: #0067C0;
-    border-radius: 4px;
+    border-radius: 22px;
+    font-weight: 800;
+    font-size: 13pt;
+    border: 1px solid #DCE3EA;
+}
+
+/* Text Hierarchies */
+#CardTitle {
+    font-size: 11pt;
     font-weight: 700;
-    font-size: 12pt;
-    border: 1px solid #EDEDED;
+    color: #1D2129;
 }
 
-#DriveTitle {
-    font-weight: 600;
-    font-size: 10.5pt;
-    color: #1A1A1A;
-}
-
-#StatusLabel {
+#CardStatus {
     font-size: 8.5pt;
-    color: #5F5F5F;
+    color: #616161;
 }
 
-/* ALL Buttons Must have Explicit Backgrounds */
+/* Global Button Base */
 QPushButton {
-    border-radius: 6px;
-    font-weight: 600;
-    padding: 6px 14px;
-    border: none;
-}
-
-/* Accent Button (Top Add, Dialog Save) */
-#AccentButton {
-    background-color: #0067C0 !important;
-    color: #FFFFFF !important;
-}
-
-#AccentButton:hover { background-color: #1975C5 !important; }
-
-/* Mount Button (Blue) */
-#MountBtn {
-    background-color: #0067C0 !important;
-    color: #FFFFFF !important;
-}
-
-#MountBtn:hover { background-color: #1975C5 !important; }
-
-/* Unmount Button (Red) */
-#UnmountBtn {
-    background-color: #C42B1C !important;
-    color: #FFFFFF !important;
-}
-
-#UnmountBtn:hover { background-color: #A82318 !important; }
-
-/* Secondary / Sub Buttons (Grey) */
-#SubButton {
-    background-color: #E5E5E5 !important;
-    color: #000000 !important;
-}
-
-#SubButton:hover { background-color: #D5D5D5 !important; }
-
-/* Log Display */
-#ActivityLogDisplay {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5E5;
     border-radius: 8px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 8.5pt;
-    color: #444444;
-    padding: 8px;
+    font-weight: 600;
+    border: none;
+    padding: 6px 14px;
 }
 
-/* ScrollArea Cleanup */
+/* Action Buttons - Solid Secondary/Ghost */
+QPushButton#GhostBtn {
+    background-color: #F0F2F5;
+    color: #1D1D1F;
+    border: 1px solid #E2E8F0;
+}
+
+QPushButton#GhostBtn:hover {
+    background-color: #E2E8F0;
+    border-color: #CBD5E1;
+}
+
+/* Accent Buttons - SOLID COLORS (Crucial Fix) */
+QPushButton#AccentBtn, QPushButton#MountBtn_Solid {
+    background-color: #0067C0; /* Windows Blue */
+    color: #FFFFFF;
+}
+
+QPushButton#AccentBtn:hover, QPushButton#MountBtn_Solid:hover {
+    background-color: #1975C5;
+}
+
+QPushButton#UnmountBtn_Solid {
+    background-color: #C42B1C; /* Windows Red */
+    color: #FFFFFF;
+}
+
+QPushButton#UnmountBtn_Solid:hover {
+    background-color: #A82318;
+}
+
+/* Activity Monitor */
+#ActivityLogBox {
+    background-color: #FFFFFF;
+    border: 1px solid #E0E3E7;
+    border-radius: 12px;
+    font-family: 'Consolas', monospace;
+    font-size: 9pt;
+    color: #334155;
+    padding: 10px;
+}
+
+/* Scroll Area & Bar Cleanup */
 QScrollArea { border: none; background: transparent; }
 QScrollBar:vertical {
     border: none;
     background: transparent;
-    width: 10px;
+    width: 8px;
+    margin: 10px 0 10px 0;
 }
 QScrollBar::handle:vertical {
-    background: #CCCCCC;
-    border-radius: 5px;
+    background: #CBD5E1;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #94A3B8;
 }
 
 QLineEdit, QComboBox {
     background-color: #FFFFFF;
-    border: 1px solid #CCCCCC;
-    border-radius: 4px;
-    padding: 4px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 6px;
 }
+
+QComboBox::drop-down { border: none; }

@@ -1,66 +1,47 @@
-/* Fluent Design Dark Theme - Windows 11 Style */
+/* Native Windows 11 Fluent Dark Theme v3.0 */
 QWidget {
-    background-color: #202020;
-    color: #FFFFFF;
+    background-color: #1C1C1C;
+    color: #F8FAFC;
     font-family: 'Segoe UI Variable Text', sans-serif;
     font-size: 10pt;
 }
 
-QMainWindow {
-    background-color: #202020;
-}
+QMainWindow { background-color: #1C1C1C; }
 
-#AppTitleHeader {
-    font-size: 14pt;
-    font-weight: 700;
-}
+#MainLogo { font-size: 18pt; font-weight: 800; }
 
 #DriveCard {
-    background-color: #2B2B2B;
-    border: 1px solid #333333;
-    border-bottom: 2px solid #1A1A1A;
-    border-radius: 8px;
+    background-color: #2D2D2D;
+    border: 1px solid #3A3A3A;
+    border-bottom: 3px solid #1A1A1A;
+    border-radius: 12px;
 }
 
-#LetterBox {
-    background-color: #202020;
-    color: #60CDFF;
-    border-radius: 4px;
-    font-weight: 700;
-    font-size: 12pt;
-    border: 1px solid #333333;
-}
-
-#DriveTitle { font-weight: 600; }
-#StatusLabel { color: #BBBBBB; }
-
-QPushButton {
-    border-radius: 6px;
-    font-weight: 700;
-}
-
-#AccentButton {
-    background-color: #60CDFF !important;
-    color: #000000 !important;
-}
-
-#MountBtn {
-    background-color: #60CDFF !important;
-    color: #000000 !important;
-}
-
-#UnmountBtn {
-    background-color: #FF99A4 !important;
-    color: #000000 !important;
-}
-
-#SubButton {
-    background-color: #333333 !important;
-    color: #FFFFFF !important;
-}
-
-#ActivityLogDisplay {
+#LetterBadge {
     background-color: #1A1A1A;
-    border: 1px solid #333333;
-    color: #BBBBBB;
+    color: #60CDFF;
+    border-radius: 22px;
+    font-weight: 800;
+}
+
+QPushButton#AccentBtn, QPushButton#MountBtn_Solid {
+    background-color: #60CDFF;
+    color: #000000;
+}
+
+QPushButton#UnmountBtn_Solid {
+    background-color: #FF99A4;
+    color: #000000;
+}
+
+QPushButton#GhostBtn {
+    background-color: #3A3A3A;
+    color: #F8FAFC;
+    border: 1px solid #4A4A4A;
+}
+
+#ActivityLogBox {
+    background-color: #1A1A1A;
+    border: 1px solid #3A3A3A;
+    color: #94A3B8;
 }
