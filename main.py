@@ -22,7 +22,10 @@ class LDriveApp:
 
         # 1. 코어 초기화
         self.config = ConfigManager()
-        self.engine = RcloneEngine(self.config.get("rclone_path", "rclone.exe"))
+        rclone_path = self.config.get("rclone_path", "rclone.exe")
+        rclone_conf = self.config.get("rclone_conf_path", "")
+        
+        self.engine = RcloneEngine(rclone_path, rclone_conf)
         
         # 2. UI 초기화
         self.window = LDriveMainWindow()
@@ -41,12 +44,14 @@ class LDriveApp:
         self._wire_signals()
         self._setup_dashboards()
         
-        # 설정 로드
-        self.window.auto_start_check.setChecked(self.config.get("auto_start", False))
+        # 경로 설정 안내
+        if not rclone_conf:
+            self.window.append_log("안내: 설정(⚙️)에서 rclone.conf 경로를 지정하면 목록을 더 정확히 불러올 수 있습니다.")
 
     def _wire_signals(self):
         """글로벌 시그널 연결"""
         self.window.add_requested.connect(self.handle_add_drive)
+        self.window.settings_requested.connect(self.handle_settings)
         self.window.auto_start_check.stateChanged.connect(
             lambda state: self.config.set_auto_start(state == 2)
         )
@@ -68,10 +73,28 @@ class LDriveApp:
             self.tray.showMessage("L-Drive Pro", "대시보드가 트레이로 숨겨졌습니다.", QSystemTrayIcon.MessageIcon.Information, 1500)
             event.ignore()
 
+    def handle_settings(self):
+        """전역 설정 다이얼로그 실행"""
+        rclone_path = self.config.get("rclone_path", "rclone.exe")
+        conf_path = self.config.get("rclone_conf_path", "")
+        
+        dialog = GlobalSettingsDialog(rclone_path, conf_path, self.window)
+        if dialog.exec():
+            new_rclone, new_conf = dialog.get_data()
+            self.config.set("rclone_path", new_rclone)
+            self.config.set("rclone_conf_path", new_conf)
+            self.engine.set_paths(new_rclone, new_conf)
+            self.window.append_log("전역 설정이 저장되었습니다.")
+            # 리모트 목록 갱신을 위해 대시보드 리로드 고려 가능
+            self._setup_dashboards()
+
     def _setup_dashboards(self):
         """저장된 모든 프로필을 대시보드 카드로 생성합니다."""
         self.window.clear_cards()
         profiles = self.config.get_profiles()
+        
+        # 자동 실행 체크박스 상태 업데이트
+        self.window.auto_start_check.setChecked(self.config.get("auto_start", False))
         
         for profile in profiles:
             card = DriveCardWidget(profile)

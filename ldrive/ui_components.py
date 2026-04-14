@@ -163,11 +163,64 @@ class DriveCardWidget(QFrame):
         self.toggle_btn.style().unpolish(self.toggle_btn)
         self.toggle_btn.style().polish(self.toggle_btn)
 
+class GlobalSettingsDialog(QDialog):
+    """전역 Rclone 경로 설정을 위한 다이얼로그입니다."""
+    def __init__(self, rclone_path, conf_path, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Global Settings")
+        self.setFixedWidth(500)
+        self._init_ui(rclone_path, conf_path)
+
+    def _init_ui(self, rclone_path, conf_path):
+        from PyQt6.QtWidgets import QFileDialog
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        
+        # Rclone Path
+        self.rclone_edit = QLineEdit(rclone_path)
+        rclone_btn = QPushButton("Browse...")
+        rclone_btn.clicked.connect(lambda: self._browse_file(self.rclone_edit, "Rclone Executable (rclone.exe)"))
+        h1 = QHBoxLayout()
+        h1.addWidget(self.rclone_edit)
+        h1.addWidget(rclone_btn)
+        
+        # Config Path
+        self.conf_edit = QLineEdit(conf_path)
+        conf_btn = QPushButton("Browse...")
+        conf_btn.clicked.connect(lambda: self._browse_file(self.conf_edit, "Rclone Config (rclone.conf)"))
+        h2 = QHBoxLayout()
+        h2.addWidget(self.conf_edit)
+        h2.addWidget(conf_btn)
+        
+        form.addRow("Rclone.exe Path:", h1)
+        form.addRow("Rclone.conf Path:", h2)
+        layout.addLayout(form)
+        
+        # Save / Cancel
+        btns = QHBoxLayout()
+        save = QPushButton("Save")
+        save.clicked.connect(self.accept)
+        cancel = QPushButton("Cancel")
+        cancel.clicked.connect(self.reject)
+        btns.addWidget(save)
+        btns.addWidget(cancel)
+        layout.addLayout(btns)
+
+    def _browse_file(self, edit_widget, file_type):
+        from PyQt6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(self, f"Select {file_type}", "", "All Files (*)")
+        if path:
+            edit_widget.setText(path)
+
+    def get_data(self):
+        return self.rclone_edit.text(), self.conf_edit.text()
+
 class LDriveMainWindow(QMainWindow):
     """
     다중 마운트 대시보드 스타일의 메인 윈도우입니다.
     """
     add_requested = pyqtSignal()
+    settings_requested = pyqtSignal() # 전역 설정 요청 시그널 추가
 
     def __init__(self):
         super().__init__()
@@ -184,8 +237,13 @@ class LDriveMainWindow(QMainWindow):
         # 헤더
         header = QHBoxLayout()
         title = QLabel("L-Drive Pro")
-        title.setStyleSheet("font-size: 20pt; font-weight: bold; color: #4a9eff;")
+        title.setStyleSheet("font-size: 20pt; font-weight: bold; color: #3498db;")
         
+        btns_layout = QHBoxLayout()
+        self.settings_btn = QPushButton("⚙ Settings")
+        self.settings_btn.setFixedWidth(100)
+        self.settings_btn.clicked.connect(self.settings_requested.emit)
+
         self.add_btn = QPushButton("➕ Add Drive")
         self.add_btn.setObjectName("MountButton")
         self.add_btn.setFixedWidth(120)
@@ -193,6 +251,7 @@ class LDriveMainWindow(QMainWindow):
         
         header.addWidget(title)
         header.addStretch()
+        header.addWidget(self.settings_btn)
         header.addWidget(self.add_btn)
         main_layout.addLayout(header)
 
@@ -235,7 +294,8 @@ class LDriveMainWindow(QMainWindow):
         self.card_layout.addWidget(card_widget)
 
     def _apply_styles(self):
-        qss_path = self.resource_path(os.path.join("assets", "styles", "dark_theme.qss"))
+        # 라이트 테마 적용
+        qss_path = self.resource_path(os.path.join("assets", "styles", "light_theme.qss"))
         if os.path.exists(qss_path):
             with open(qss_path, "r", encoding="utf-8") as f:
                 self.setStyleSheet(f.read())

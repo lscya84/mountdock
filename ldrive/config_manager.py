@@ -29,10 +29,11 @@ class ConfigManager:
 
     def __init__(self):
         self.config = {
-            "theme": "dark",
+            "theme": "light",
             "auto_start": False,
-            "profiles": [],  # 다중 프로필 저장 리스트
-            "rclone_path": "rclone.exe"
+            "profiles": [],
+            "rclone_path": "rclone.exe",
+            "rclone_conf_path": ""  # 전역 rclone.conf 경로 추가
         }
         self.load_config()
 

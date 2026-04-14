@@ -13,11 +13,17 @@ class RcloneEngine:
     프로세스 실행, 모니터링, 안전한 종료 기능을 제공합니다.
     """
 
-    def __init__(self, rclone_path: str = "rclone.exe"):
+    def __init__(self, rclone_path: str = "rclone.exe", rclone_conf_path: str = ""):
         self.rclone_path = rclone_path
+        self.rclone_conf_path = rclone_conf_path
         self._active_mounts: Dict[str, subprocess.Popen] = {}
         
-        # 시스템 PATH에서 rclone.exe 확인 및 업데이트
+        self.check_binary()
+
+    def set_paths(self, rclone_path: str, rclone_conf_path: str):
+        """전역 Rclone 바이너리 및 설정 파일 경로를 업데이트합니다."""
+        self.rclone_path = rclone_path
+        self.rclone_conf_path = rclone_conf_path
         self.check_binary()
 
     def check_binary(self) -> bool:
@@ -52,6 +58,9 @@ class RcloneEngine:
         """
         try:
             cmd = [self.rclone_path, "listremotes"]
+            if self.rclone_conf_path and os.path.exists(self.rclone_conf_path):
+                cmd.extend(["--config", self.rclone_conf_path])
+            
             result = subprocess.run(cmd, capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW)
             if result.returncode == 0:
                 remotes = [line.strip().replace(":", "") for line in result.stdout.splitlines() if line.strip()]
@@ -93,6 +102,9 @@ class RcloneEngine:
             "--volname", f"L-Drive ({remote})",
             "--no-console"
         ]
+
+        if self.rclone_conf_path and os.path.exists(self.rclone_conf_path):
+            cmd.extend(["--config", self.rclone_conf_path])
 
         # 커스텀 인자 추가 (공백으로 분리)
         if custom_args:
