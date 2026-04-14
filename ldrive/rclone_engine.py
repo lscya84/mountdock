@@ -70,48 +70,32 @@ class RcloneEngine:
             logger.error(f"리모트 목록 로드 실패: {e}")
             return []
 
-    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "", volname: str = "") -> bool:
+    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "", volname: str = "") -> subprocess.Popen:
         """
         지정된 리모트를 특정 드라이브 문자로 마운트합니다.
-        
-        Args:
-            remote (str): 마운트할 리모트 이름
-            drive_letter (str): 할당할 드라이브 문자 (예: 'Z')
-            vfs_mode (str): VFS 캐시 모드 ('full', 'writes' 등)
-            root_folder (str): 리모트 내의 시작 경로 (기본값 '/')
-            custom_args (str): 사용자가 직접 입력한 추가 인자들
-            volname (str): 탐색기에 표시될 볼륨 이름
-            
-        Returns:
-            bool: 성공 여부
+        프로세스 객체를 반환하여 외부에서 상태를 모니터링할 수 있게 합니다.
         """
         if drive_letter in self._active_mounts:
-            logger.warning(f"{drive_letter}: 드라이브는 이미 마운트 시도 중이거나 마운트되어 있습니다.")
-            return False
+            logger.warning(f"{drive_letter}: 이미 마운트 중입니다.")
+            return None
 
-        # 드라이브 문자 형식 정리 (Z -> Z:)
         drive_path = f"{drive_letter.upper()}:"
         
-        # 기본 명령어 조립
-        # remote:root_folder 형식
-        # root_folder가 / 이면 remote: 로 처리
+        # remote_path 조립
         if root_folder == "/":
             remote_path = f"{remote}:"
         else:
-            # root_folder가 /로 시작하면 제거 (remote:/folder -> remote:folder)
             clean_root = root_folder.lstrip("/")
             remote_path = f"{remote}:{clean_root}"
         
         volume_label = volname if volname else f"L-Drive ({remote})"
         
+        # 윈도우에서 가장 안정적인 기본형 명령어로 원복
         cmd = [
             self.rclone_path, "mount",
             remote_path, drive_path,
             "--vfs-cache-mode", vfs_mode,
             "--volname", volume_label,
-            "--network-mode",
-            "--winfsp-mount-as=admin",
-            "--log-file", "rclone-mount.log",
             "--no-console"
         ]
 

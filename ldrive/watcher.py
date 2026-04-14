@@ -3,6 +3,7 @@ import socket
 import os
 import logging
 import psutil
+import subprocess
 from PyQt6.QtCore import QThread, pyqtSignal
 from ldrive.rclone_engine import RcloneEngine
 
@@ -12,7 +13,9 @@ class LDriveWatcher(QThread):
     status_changed = pyqtSignal(str)
     log_emitted = pyqtSignal(str)
 
-    def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, root_folder: str = "/", custom_args: str = "", volname: str = ""):
+    def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, 
+                 root_folder: str = "/", custom_args: str = "", volname: str = "",
+                 process: subprocess.Popen = None):
         super().__init__()
         self.engine = engine
         self.remote = remote
@@ -21,6 +24,7 @@ class LDriveWatcher(QThread):
         self.root_folder = root_folder
         self.custom_args = custom_args
         self.volname = volname
+        self.process = process # 현재 감시 중인 rclone 프로세스 객체
         
         self.is_running = True
         self.check_interval = 5
@@ -28,84 +32,89 @@ class LDriveWatcher(QThread):
         self.drive_path = f"{self.drive_letter.upper()}:\\"
 
     def run(self):
-        logger.info(f"Watcher 스레드 시작: {self.remote} -> {self.drive_path}")
-        self.log_emitted.emit(f"[Watcher] 감시 시작: {self.remote} -> {self.drive_path}")
+        logger.info(f"Watcher 스레드 시작: {self.remote}")
         
-        # Rclone이 드라이브를 완전히 띄울 넉넉한 시간을 줍니다.
-        self.msleep(8000)
-        
+        # 초기 생존 확인 (Race Condition 방지)
+        if not self._wait_and_check_alive(wait_sec=5):
+            return
+
         while self.is_running:
             if self._check_connection():
                 self.status_changed.emit("Connected")
                 self.msleep(self.check_interval * 1000)
             else:
                 self.status_changed.emit("Disconnected")
-                self.log_emitted.emit(f"[Watcher] {self.remote} 연결 유실 감지 (드라이브 미발견).")
                 self._handle_reconnect()
 
-    def _check_connection(self) -> bool:
-        if not self._is_network_available():
-            return False
-        return self._check_drive_exists()
-
-    def _check_drive_exists(self) -> bool:
-        """OS 수준에서 마운트 유무를 다각도로 확인합니다."""
-        # 1. 표준 경로 체크
-        if os.path.exists(self.drive_path) or os.path.exists(self.drive_path.rstrip("\\")):
-            return True
-        
-        # 2. psutil 파티션 리스트 체크 (네트워크 드라이브 인식 보조)
-        try:
-            drive_letter_upper = self.drive_letter.upper()
-            partitions = psutil.disk_partitions()
-            for p in partitions:
-                if p.mountpoint.upper().startswith(f"{drive_letter_upper}:"):
-                    return True
-        except Exception as e:
-            logger.error(f"Partition check error: {e}")
+    def _wait_and_check_alive(self, wait_sec=8) -> bool:
+        """프로세스가 살아있는지 주기적으로 확인하며 대기합니다."""
+        for i in range(wait_sec):
+            if not self.is_running: return False
             
+            # 프로세스 사후 검증
+            if self.process and self.process.poll() is not None:
+                _, stderr = self.process.communicate()
+                err_msg = stderr.decode('utf-8', errors='ignore').strip()
+                self.log_emitted.emit(f"[Error] {self.remote} 프로세스가 즉시 종료됨 (Code: {self.process.returncode})")
+                if err_msg: self.log_emitted.emit(f"[Detail] {err_msg[:200]}")
+                self.status_changed.emit("Error")
+                return False
+            
+            # 드라이브 확인
+            if self._check_drive_exists():
+                self.status_changed.emit("Connected")
+                return True
+                
+            self.msleep(1000)
+        
+        self.log_emitted.emit(f"[Warning] {self.remote} 마운트 명령은 유지 중이나 드라이브가 응답하지 않습니다.")
         return False
 
-    def _is_network_available(self, host="8.8.8.8", port=53, timeout=3) -> bool:
-        try:
-            socket.setdefaulttimeout(timeout)
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
-            return True
-        except Exception:
+    def _check_connection(self) -> bool:
+        # 프로세스 생존 확인
+        if self.process and self.process.poll() is not None:
             return False
+        # 네트워크 및 드라이브 확인
+        return self._is_network_available() and self._check_drive_exists()
+
+    def _check_drive_exists(self) -> bool:
+        if os.path.exists(self.drive_path) or os.path.exists(self.drive_path.rstrip("\\")):
+            return True
+        try:
+            for p in psutil.disk_partitions():
+                if p.mountpoint.upper().startswith(f"{self.drive_letter.upper()}:"):
+                    return True
+        except: pass
+        return False
+
+    def _is_network_available(self) -> bool:
+        try:
+            socket.setdefaulttimeout(3)
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("8.8.8.8", 53))
+            return True
+        except: return False
 
     def _handle_reconnect(self):
         backoff = 1
-        # 재연결 전 깔끔하게 한 번 밀어주기
         self.engine.unmount(self.drive_letter)
         
         while self.is_running:
             self.status_changed.emit(f"Reconnecting ({backoff}s...)")
             self.log_emitted.emit(f"[Watcher] {self.remote} 재연결 시도 중...")
             
-            success = self.engine.mount(
+            # 새 프로세스 생성
+            self.process = self.engine.mount(
                 self.remote, self.drive_letter, self.vfs_mode, 
                 self.root_folder, self.custom_args, self.volname
             )
             
-            if success:
-                # 등록 대기 경과 시간 (8초)
-                self.msleep(8000)
-                if self._check_drive_exists():
-                    self.log_emitted.emit(f"[Watcher] {self.remote} 재연결 성공!")
-                    self.status_changed.emit("Connected")
-                    break
-                else:
-                    self.log_emitted.emit(f"[Watcher] {self.remote} 마운트 성공했으나 드라이브가 보이지 않습니다 (8초 경과).")
-                    self.engine.unmount(self.drive_letter)
+            if self.process and self._wait_and_check_alive(wait_sec=8):
+                self.log_emitted.emit(f"[Watcher] {self.remote} 재연결 성공!")
+                break
             
             self.msleep(backoff * 1000)
             backoff = min(backoff * 2, self.max_backoff)
-            
-            if not self._is_network_available():
-                self.log_emitted.emit("[Watcher] 네트워크 연결 대기 중...")
 
     def stop(self):
         self.is_running = False
         self.wait()
-        logger.info("Watcher 스레드가 중지되었습니다.")

@@ -1,168 +1,116 @@
-/* Premium SaaS Light Theme for L-Drive Pro */
+/* High-Density Compact Light Theme */
 QWidget {
-    background-color: #f9fafb;
-    color: #111827;
-    font-family: 'Segoe UI Variable Display', 'Pretendard', 'Segoe UI', system-ui, sans-serif;
-    font-size: 11pt;
-    outline: none;
+    background-color: #f8f9fa;
+    color: #212529;
+    font-family: 'Segoe UI Variable Display', sans-serif;
+    font-size: 10pt;
 }
 
 QMainWindow {
-    background-color: #f3f4f6;
+    background-color: #f8f9fa;
 }
 
-/* Header */
-#AppTitle {
-    font-size: 24pt;
+#AppLogo {
+    font-size: 14pt;
     font-weight: 800;
-    color: #3182F6; /* Toss Blue */
-    letter-spacing: -0.5px;
+    color: #3182f6;
 }
 
-/* GroupBox - Modern Flat Style */
-QGroupBox {
-    border: none;
-    background-color: transparent;
-    margin-top: 25px;
-    font-weight: 700;
-    font-size: 13pt;
-    color: #374151;
-}
-
-QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 0px;
-    padding-bottom: 8px;
-}
-
-QLineEdit, QComboBox, QPlainTextEdit {
+/* Header Buttons */
+#HeaderButton {
     background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 10px 14px;
-    color: #1f2937;
-    selection-background-color: #3182F6;
-}
-
-QLineEdit:focus, QComboBox:focus {
-    border: 2px solid #3182F6;
-    padding: 9px 13px; /* Adjust for border width increase */
-}
-
-/* ScrollArea */
-QScrollArea {
-    border: none;
-    background-color: transparent;
-}
-
-/* Buttons */
-QPushButton {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 12px 18px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 2px 4px;
     font-weight: 600;
-    color: #374151;
+    font-size: 9pt;
 }
 
-QPushButton:hover {
-    background-color: #f9fafb;
-    border: 1px solid #d1d5db;
+#HeaderButton:hover {
+    background-color: #e9ecef;
 }
 
-/* Primary Button (Add, Settings, etc) */
-#MountButton {
-    background-color: #3182F6;
-    color: white;
-    border: none;
-}
-
-#MountButton:hover {
-    background-color: #1b64da;
-}
-
-#MountButton:pressed {
-    background-color: #154fb1;
-}
-
-/* Unmount Button */
-#UnmountButton {
-    background-color: #FF5C5C; /* Coral Red */
-    color: white;
-    border: none;
-}
-
-#UnmountButton:hover {
-    background-color: #e54b4b;
-}
-
-/* Icon Buttons (Edit, Delete) */
-#IconButton {
-    background-color: #f3f4f6;
-    border: none;
-    border-radius: 8px;
-    padding: 6px;
-}
-
-#IconButton:hover {
-    background-color: #e5e7eb;
-}
-
-/* DriveCard Styles */
+/* Drive Row (Card) */
 #DriveCard {
     background-color: #ffffff;
-    border: 1px solid #f3f4f6;
-    border-radius: 16px;
-    /* Subtle shadow simulated via border bottom */
-    border-bottom: 2px solid #e5e7eb;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
 }
 
-#DriveCard:hover {
-    border: 1px solid #3182F6;
-    border-bottom: 2px solid #3182F6;
+#LetterIcon {
+    background-color: #f1f3f5;
+    color: #3182f6;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 12pt;
+    border: 1px solid #dee2e6;
 }
 
-#DriveCardTitle {
-    font-size: 15pt;
-    font-weight: 700;
-    color: #111827;
-}
-
-#DriveCardRemote {
+#DriveTitle {
     font-size: 10pt;
-    color: #6b7280;
+    font-weight: 700;
+    color: #212529;
+}
+
+#StatusLabel {
+    font-size: 8pt;
+    color: #adb5bd;
     font-weight: 400;
 }
 
-#DriveCardLetter {
-    font-size: 16pt;
-    font-weight: 800;
-    color: #3182F6;
-}
-
-/* Status Labels */
-#StatusDisconnected { color: #FF8C42; font-weight: 600; font-size: 9pt; }
-#StatusConnected { color: #34C759; font-weight: 600; font-size: 9pt; }
-#StatusReconnecting { color: #3182F6; font-weight: 600; font-size: 9pt; }
-
-/* ScrollBar Customization */
-QScrollBar:vertical {
+/* Buttons */
+QPushButton#MountButton {
+    background-color: #3182f6;
+    color: white;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 9pt;
     border: none;
-    background: #f3f4f6;
-    width: 10px;
-    border-radius: 5px;
 }
 
-QScrollBar::handle:vertical {
-    background: #d1d5db;
-    min-height: 30px;
-    border-radius: 5px;
+QPushButton#MountButton:hover {
+    background-color: #1b64da;
 }
 
-QScrollBar::handle:vertical:hover {
-    background: #9ca3af;
+QPushButton#UnmountButton {
+    background-color: #fa5252;
+    color: white;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 9pt;
+    border: none;
 }
 
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    height: 0px;
+/* Ghost Buttons (Edit/Delete) */
+#GhostButton {
+    background-color: transparent;
+    border: none;
+    padding: 0px;
+}
+
+#GhostButton:hover {
+    background-color: #f1f3f5;
+    border-radius: 4px;
+}
+
+/* Compact Log */
+#CompactLog {
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 8pt;
+    color: #495057;
+}
+
+/* Inputs */
+QLineEdit, QComboBox {
+    background-color: white;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QScrollArea {
+    border: none;
 }
