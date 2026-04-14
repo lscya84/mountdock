@@ -26,8 +26,14 @@ class LDriveApp:
         # 2. UI 초기화
         self.window = LDriveMainWindow()
         
-        # 아이콘 설정 (assets/icon.ico가 없으면 시스템 표준 아이콘 사용)
-        self.default_icon = self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
+        # 아이콘 설정
+        icon_path = LDriveMainWindow.resource_path(os.path.join("assets", "icon.ico"))
+        if os.path.exists(icon_path):
+            self.default_icon = QIcon(icon_path)
+        else:
+            # 아이콘이 없는 경우 시스템 표준 아이콘 사용
+            self.default_icon = self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
+        
         self.window.setWindowIcon(self.default_icon)
         
         self.tray = LDriveTrayIcon(self.default_icon)

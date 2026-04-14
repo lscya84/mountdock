@@ -137,12 +137,28 @@ class LDriveMainWindow(QMainWindow):
 
     def _apply_styles(self):
         """작성된 QSS 파일을 로드하여 테마를 적용합니다."""
-        qss_path = os.path.join(os.getcwd(), "assets", "styles", "dark_theme.qss")
+        qss_path = self.resource_path(os.path.join("assets", "styles", "dark_theme.qss"))
         if os.path.exists(qss_path):
             with open(qss_path, "r", encoding="utf-8") as f:
                 self.setStyleSheet(f.read())
         else:
             print(f"Warning: Stylesheet not found at {qss_path}")
+
+    @staticmethod
+    def resource_path(relative_path):
+        """
+        PyInstaller의 --onefile 모드와 일반 실행 모드 모두에서 
+        리소스 파일의 절대 경로를 반환합니다.
+        """
+        import sys
+        try:
+            # PyInstaller가 임시 폴더에 압축을 푼 경로
+            base_path = sys._MEIPASS
+        except Exception:
+            # 일반 실행 시 현재 디렉토리
+            base_path = os.path.abspath(".")
+        
+        return os.path.join(base_path, relative_path)
 
     def append_log(self, message: str):
         """로그 뷰어에 텍스트를 추가합니다."""
