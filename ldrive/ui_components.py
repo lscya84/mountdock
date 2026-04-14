@@ -232,3 +232,45 @@ class LDriveTrayIcon(QSystemTrayIcon):
         ex = QAction("Exit", self); ex.triggered.connect(self.exit_requested.emit)
         menu.addAction(show); menu.addSeparator(); menu.addAction(ex)
         self.setContextMenu(menu)
+
+class GlobalSettingsDialog(QDialog):
+    def __init__(self, config_dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Global Options")
+        self.setFixedWidth(360)
+        self.config_dict = config_dict
+        self._init_ui()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+        layout.setContentsMargins(25, 25, 25, 25)
+        
+        form = QFormLayout()
+        self.rclone_edit = QLineEdit(self.config_dict.get("rclone_path", "rclone.exe"))
+        self.conf_edit = QLineEdit(self.config_dict.get("rclone_conf_path", ""))
+        self.auto_start = QCheckBox("Automatically start with Windows")
+        self.auto_start.setChecked(self.config_dict.get("auto_start", False))
+        self.minimized = QCheckBox("Start minimized (System Tray)")
+        self.minimized.setChecked(self.config_dict.get("start_minimized", False))
+        
+        form.addRow("Rclone Path:", self.rclone_edit)
+        form.addRow("Config Path:", self.conf_edit)
+        layout.addLayout(form)
+        layout.addWidget(self.auto_start)
+        layout.addWidget(self.minimized)
+        
+        btns = QHBoxLayout()
+        save = QPushButton("Save Config")
+        save.setObjectName("ConnectBtn")
+        save.clicked.connect(self.accept)
+        btns.addStretch(); btns.addWidget(save)
+        layout.addLayout(btns)
+
+    def get_data(self):
+        return {
+            "rclone_path": self.rclone_edit.text(),
+            "rclone_conf_path": self.conf_edit.text(),
+            "auto_start": self.auto_start.isChecked(),
+            "start_minimized": self.minimized.isChecked()
+        }
