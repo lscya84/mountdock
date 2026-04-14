@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
+    QStyle,
     QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
@@ -113,7 +113,7 @@ class DriveCardWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setMinimumHeight(72)
+        self.setMinimumHeight(68)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(8)
@@ -139,60 +139,61 @@ class DriveCardWidget(QFrame):
         info_layout.addWidget(self.path_label)
         layout.addLayout(info_layout, 1)
 
-        self.status_label = QLabel("Off")
-        self.status_label.setObjectName("StatusPill")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.status_label)
+        self.status_dot = QLabel("")
+        self.status_dot.setObjectName("StatusDot")
+        self.status_dot.setFixedSize(10, 10)
+        layout.addWidget(self.status_dot, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        self.toggle_btn = QPushButton("On")
-        self.toggle_btn.setObjectName("AccentBtn")
-        self.toggle_btn.setFixedSize(52, 26)
-        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn = self._make_icon_button(QStyle.StandardPixmap.SP_MediaPlay, "Connect")
         self.toggle_btn.clicked.connect(self._on_toggle)
         layout.addWidget(self.toggle_btn)
 
-        self.edit_btn = QPushButton("Edit")
-        self.edit_btn.setObjectName("GhostBtn")
-        self.edit_btn.setFixedSize(42, 24)
-        self.edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.edit_btn = self._make_icon_button(QStyle.StandardPixmap.SP_FileDialogDetailedView, "Edit")
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
         layout.addWidget(self.edit_btn)
 
-        self.delete_btn = QPushButton("Del")
-        self.delete_btn.setObjectName("GhostDangerBtn")
-        self.delete_btn.setFixedSize(38, 24)
-        self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.delete_btn = self._make_icon_button(QStyle.StandardPixmap.SP_TrashIcon, "Delete", danger=True)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
         layout.addWidget(self.delete_btn)
+
+        self.set_status("Disconnected")
+
+    def _make_icon_button(self, icon_type, tooltip, danger=False):
+        button = QPushButton("")
+        button.setObjectName("GhostDangerBtn" if danger else "GhostBtn")
+        button.setIcon(self.style().standardIcon(icon_type))
+        button.setToolTip(tooltip)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setFixedSize(28, 28)
+        return button
 
     def _on_toggle(self):
         self.toggle_requested.emit(self.profile["id"], not self.is_running)
 
     def set_status(self, status):
-        compact_status = {
-            "Connected": "On",
-            "Disconnected": "Off",
-            "Starting": "Wait",
-            "Mounting 1/15": "Wait",
-            "Admin Block": "Admin",
-        }.get(status, status if len(status) <= 10 else "Wait")
-
-        self.status_label.setText(compact_status)
         if status == "Connected":
-            self.toggle_btn.setText("Off")
+            self.toggle_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop))
+            self.toggle_btn.setToolTip("Disconnect")
             self.toggle_btn.setObjectName("DangerBtn")
-            self.status_label.setProperty("state", "connected")
+            self.status_dot.setProperty("state", "connected")
             self.is_running = True
+        elif status == "Admin Block":
+            self.toggle_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+            self.toggle_btn.setToolTip("Connect")
+            self.toggle_btn.setObjectName("GhostBtn")
+            self.status_dot.setProperty("state", "blocked")
+            self.is_running = False
         else:
-            self.toggle_btn.setText("On")
-            self.toggle_btn.setObjectName("AccentBtn")
-            self.status_label.setProperty("state", "idle")
+            self.toggle_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+            self.toggle_btn.setToolTip("Connect")
+            self.toggle_btn.setObjectName("AccentBtn" if status == "Disconnected" else "GhostBtn")
+            self.status_dot.setProperty("state", "idle" if status == "Disconnected" else "busy")
             self.is_running = False
 
         self.toggle_btn.style().unpolish(self.toggle_btn)
         self.toggle_btn.style().polish(self.toggle_btn)
-        self.status_label.style().unpolish(self.status_label)
-        self.status_label.style().polish(self.status_label)
+        self.status_dot.style().unpolish(self.status_dot)
+        self.status_dot.style().polish(self.status_dot)
 
 
 class GlobalSettingsDialog(QDialog):
@@ -289,32 +290,14 @@ class LDriveMainWindow(QMainWindow):
         title = QLabel("L-Drive")
         title.setObjectName("AppTitleHeader")
         top_layout.addWidget(title)
-
         top_layout.addStretch()
 
-        self.total_stat = self._create_stat_chip("0")
-        self.active_stat = self._create_stat_chip("0")
-        self.theme_stat = self._create_stat_chip("L")
-        top_layout.addWidget(self.total_stat)
-        top_layout.addWidget(self.active_stat)
-        top_layout.addWidget(self.theme_stat)
-
-        theme_btn = QPushButton("T")
-        theme_btn.setObjectName("GhostBtn")
-        theme_btn.setFixedSize(28, 28)
-        theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        theme_btn = self._make_top_icon_button(QStyle.StandardPixmap.SP_BrowserReload, "Theme")
         theme_btn.clicked.connect(self.theme_toggle_requested.emit)
-
-        settings_btn = QPushButton("S")
-        settings_btn.setObjectName("GhostBtn")
-        settings_btn.setFixedSize(28, 28)
-        settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        settings_btn = self._make_top_icon_button(QStyle.StandardPixmap.SP_FileDialogContentsView, "Settings")
         settings_btn.clicked.connect(self.settings_requested.emit)
-
-        add_btn = QPushButton("+")
+        add_btn = self._make_top_icon_button(QStyle.StandardPixmap.SP_FileDialogNewFolder, "Add")
         add_btn.setObjectName("AccentBtn")
-        add_btn.setFixedSize(28, 28)
-        add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         add_btn.clicked.connect(self.add_requested.emit)
 
         top_layout.addWidget(theme_btn)
@@ -347,22 +330,14 @@ class LDriveMainWindow(QMainWindow):
         self.log_viewer.setFixedHeight(58)
         main_layout.addWidget(self.log_viewer)
 
-    def _create_stat_chip(self, value_text):
-        chip = QFrame()
-        chip.setObjectName("StatCard")
-        chip.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-        layout = QVBoxLayout(chip)
-        layout.setContentsMargins(8, 4, 8, 4)
-        layout.setSpacing(0)
-
-        value = QLabel(value_text)
-        value.setObjectName("StatValue")
-        value.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        layout.addWidget(value)
-        chip.value_label = value
-        return chip
+    def _make_top_icon_button(self, icon_type, tooltip):
+        button = QPushButton("")
+        button.setObjectName("GhostBtn")
+        button.setIcon(self.style().standardIcon(icon_type))
+        button.setToolTip(tooltip)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setFixedSize(28, 28)
+        return button
 
     def clear_cards(self):
         while self.card_layout.count():
@@ -388,10 +363,11 @@ class LDriveMainWindow(QMainWindow):
         title = QLabel("No drives")
         title.setObjectName("EmptyTitle")
 
-        add_btn = QPushButton("Add")
+        add_btn = QPushButton("")
         add_btn.setObjectName("AccentBtn")
+        add_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
         add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_btn.setFixedHeight(30)
+        add_btn.setFixedSize(34, 30)
         add_btn.clicked.connect(self.add_requested.emit)
 
         layout.addWidget(title, 0, Qt.AlignmentFlag.AlignHCenter)
@@ -399,16 +375,13 @@ class LDriveMainWindow(QMainWindow):
         self.card_layout.addWidget(empty)
 
     def update_overview(self, total_count, active_count, theme_name):
-        self.total_stat.value_label.setText(str(total_count))
-        self.active_stat.value_label.setText(str(active_count))
-        self.theme_stat.value_label.setText(theme_name[:1].upper())
+        return
 
     def _apply_styles(self, theme_name="light"):
         qss_path = self.resource_path(os.path.join("assets", "styles", f"{theme_name}_theme.qss"))
         if os.path.exists(qss_path):
             with open(qss_path, "r", encoding="utf-8") as file:
                 self.setStyleSheet(file.read())
-        self.update_overview(self.card_layout.count(), 0, theme_name)
 
     @staticmethod
     def resource_path(relative_path):

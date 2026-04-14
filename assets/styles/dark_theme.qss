@@ -10,7 +10,6 @@ QMainWindow, QWidget#AppShell {
 }
 
 QFrame#HeroPanel,
-QFrame#StatCard,
 QFrame#DriveCard,
 QFrame#EmptyState,
 QDialog#SheetDialog {
@@ -42,12 +41,6 @@ QLabel#CardFootnote {
     color: #99abc1;
 }
 
-QLabel#StatValue {
-    color: #f4f8fd;
-    font-size: 9pt;
-    font-weight: 700;
-}
-
 QLabel#LetterBadge {
     background: #183756;
     color: #9dd6ff;
@@ -63,21 +56,21 @@ QLabel#CardTitle {
     font-weight: 700;
 }
 
-QLabel#StatusPill {
-    background: rgba(147, 166, 189, 0.12);
-    color: #d6e2f1;
-    border: 1px solid rgba(147, 166, 189, 0.16);
-    border-radius: 999px;
-    padding: 2px 8px;
-    font-size: 8pt;
-    font-weight: 600;
-    min-width: 34px;
+QLabel#StatusDot {
+    background: rgba(147, 166, 189, 0.28);
+    border-radius: 5px;
 }
 
-QLabel#StatusPill[state="connected"] {
-    background: rgba(55, 190, 124, 0.14);
-    color: #8ef0ba;
-    border-color: rgba(55, 190, 124, 0.22);
+QLabel#StatusDot[state="connected"] {
+    background: #37be7c;
+}
+
+QLabel#StatusDot[state="busy"] {
+    background: #f3ae36;
+}
+
+QLabel#StatusDot[state="blocked"] {
+    background: #ca473e;
 }
 
 QPushButton {
