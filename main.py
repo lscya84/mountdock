@@ -1,7 +1,8 @@
 import sys
+import os
 import logging
-from PySide6.QtWidgets import QApplication, QStyle, QMessageBox, QSystemTrayIcon
-from PySide6.QtGui import QIcon, QAction
+from PyQt6.QtWidgets import QApplication, QStyle, QMessageBox, QSystemTrayIcon
+from PyQt6.QtGui import QIcon, QAction
 
 from ldrive.config_manager import ConfigManager
 from ldrive.rclone_engine import RcloneEngine
@@ -32,7 +33,7 @@ class LDriveApp:
             self.default_icon = QIcon(icon_path)
         else:
             # 아이콘이 없는 경우 시스템 표준 아이콘 사용
-            self.default_icon = self.app.style().standardIcon(QStyle.SP_DriveHDIcon)
+            self.default_icon = self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
         
         self.window.setWindowIcon(self.default_icon)
         
@@ -105,7 +106,7 @@ class LDriveApp:
             self.tray.showMessage(
                 "L-Drive Pro",
                 "프로그램이 트레이에서 실행 중입니다.",
-                QSystemTrayIcon.Information,
+                QSystemTrayIcon.MessageIcon.Information,
                 2000
             )
             event.ignore()
