@@ -70,7 +70,7 @@ class RcloneEngine:
             logger.error(f"리모트 목록 로드 실패: {e}")
             return []
 
-    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "") -> bool:
+    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "", volname: str = "") -> bool:
         """
         지정된 리모트를 특정 드라이브 문자로 마운트합니다.
         
@@ -80,6 +80,7 @@ class RcloneEngine:
             vfs_mode (str): VFS 캐시 모드 ('full', 'writes' 등)
             root_folder (str): 리모트 내의 시작 경로 (기본값 '/')
             custom_args (str): 사용자가 직접 입력한 추가 인자들
+            volname (str): 탐색기에 표시될 볼륨 이름
             
         Returns:
             bool: 성공 여부
@@ -95,11 +96,13 @@ class RcloneEngine:
         # remote:root_folder 형식 (root가 /이면 생략 가능하지만 명시적으로 처리)
         remote_path = f"{remote}:{root_folder}"
         
+        volume_label = volname if volname else f"L-Drive ({remote})"
+        
         cmd = [
             self.rclone_path, "mount",
             remote_path, drive_path,
             "--vfs-cache-mode", vfs_mode,
-            "--volname", f"L-Drive ({remote})",
+            "--volname", volume_label,
             "--no-console"
         ]
 

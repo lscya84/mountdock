@@ -31,9 +31,10 @@ class ConfigManager:
         self.config = {
             "theme": "light",
             "auto_start": False,
+            "start_minimized": False, # 트레이 모드 시작 옵션 추가
             "profiles": [],
             "rclone_path": "rclone.exe",
-            "rclone_conf_path": ""  # 전역 rclone.conf 경로 추가
+            "rclone_conf_path": ""
         }
         self.load_config()
 

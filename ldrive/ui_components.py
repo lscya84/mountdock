@@ -41,22 +41,27 @@ class DriveSettingsDialog(QDialog):
         if "letter" in self.profile:
             self.letter_combo.setCurrentText(f"{self.profile['letter']}:")
         
-        # 3. 루트 폴더
+        # 3. 드라이브 이름 (Volume Label)
+        self.vol_edit = QLineEdit(self.profile.get("volname", ""))
+        self.vol_edit.setPlaceholderText("탐색기에 표시될 이름 (비워두면 리모트명)")
+
+        # 4. 루트 폴더
         self.root_edit = QLineEdit(self.profile.get("root_folder", "/"))
         
-        # 4. VFS 모드
+        # 5. VFS 모드
         self.vfs_combo = QComboBox()
         self.vfs_combo.addItems(["full (Media)", "writes (Work)", "off", "minimal"])
         vfs_val = self.profile.get("vfs_mode", "full")
         index = self.vfs_combo.findText(vfs_val, Qt.MatchFlag.MatchContains)
         if index >= 0: self.vfs_combo.setCurrentIndex(index)
         
-        # 5. 커스텀 인자
+        # 6. 커스텀 인자
         self.args_edit = QLineEdit(self.profile.get("custom_args", ""))
         self.args_edit.setPlaceholderText("--dir-cache-time 72h 등")
 
         form.addRow("Remote Target:", self.remote_combo)
         form.addRow("Drive Letter:", self.letter_combo)
+        form.addRow("Volume Label:", self.vol_edit)
         form.addRow("Root Folder:", self.root_edit)
         form.addRow("VFS Cache Mode:", self.vfs_combo)
         form.addRow("Custom Arguments:", self.args_edit)
@@ -66,6 +71,7 @@ class DriveSettingsDialog(QDialog):
         # 버튼
         btn_layout = QHBoxLayout()
         save_btn = QPushButton("Save Settings")
+        save_btn.setObjectName("MountButton")
         save_btn.clicked.connect(self.accept)
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
@@ -78,6 +84,7 @@ class DriveSettingsDialog(QDialog):
         return {
             "remote": self.remote_combo.currentText(),
             "letter": self.letter_combo.currentText().replace(":", ""),
+            "volname": self.vol_edit.text(),
             "root_folder": self.root_edit.text(),
             "vfs_mode": self.vfs_combo.currentText().split(" ")[0],
             "custom_args": self.args_edit.text()
@@ -87,7 +94,7 @@ class DriveCardWidget(QFrame):
     """
     대시보드에 표시되는 개별 드라이브 카드 항목입니다.
     """
-    toggle_requested = pyqtSignal(str, bool) # id, is_running
+    toggle_requested = pyqtSignal(str, bool)
     edit_requested = pyqtSignal(str)
     delete_requested = pyqtSignal(str)
 
@@ -109,7 +116,8 @@ class DriveCardWidget(QFrame):
 
         # 중앙: 리모트 정보
         info_layout = QVBoxLayout()
-        self.remote_label = QLabel(self.profile['remote'])
+        display_name = self.profile.get('volname') or self.profile['remote']
+        self.remote_label = QLabel(display_name)
         self.remote_label.setObjectName("DriveCardTitle")
         self.status_label = QLabel("Disconnected")
         self.status_label.setObjectName("StatusDisconnected")
@@ -120,9 +128,10 @@ class DriveCardWidget(QFrame):
         layout.addStretch()
 
         # 오른쪽: 버튼들
-        self.toggle_btn = QPushButton("▶ Start")
+        self.toggle_btn = QPushButton("▶ 시작 (Start)")
         self.toggle_btn.setObjectName("MountButton")
-        self.toggle_btn.setFixedWidth(80)
+        self.toggle_btn.setFixedSize(110, 40)
+        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.toggle_btn.clicked.connect(self._on_toggle)
         
         self.edit_btn = QPushButton("⚙")
@@ -146,59 +155,75 @@ class DriveCardWidget(QFrame):
         self.status_label.setText(status)
         if status == "Connected":
             self.status_label.setObjectName("StatusConnected")
-            self.toggle_btn.setText("■ Stop")
+            self.toggle_btn.setText("⏹ 정지 (Stop)")
             self.toggle_btn.setObjectName("UnmountButton")
             self.is_running = True
         elif "Reconnecting" in status:
             self.status_label.setObjectName("StatusReconnecting")
         else:
             self.status_label.setObjectName("StatusDisconnected")
-            self.toggle_btn.setText("▶ Start")
+            self.toggle_btn.setText("▶ 시작 (Start)")
             self.toggle_btn.setObjectName("MountButton")
             self.is_running = False
         
-        # 스타일 즉시 적용을 위해 필요
         self.status_label.style().unpolish(self.status_label)
         self.status_label.style().polish(self.status_label)
         self.toggle_btn.style().unpolish(self.toggle_btn)
         self.toggle_btn.style().polish(self.toggle_btn)
 
 class GlobalSettingsDialog(QDialog):
-    """전역 Rclone 경로 설정을 위한 다이얼로그입니다."""
-    def __init__(self, rclone_path, conf_path, parent=None):
+    """전역 Rclone 및 시스템 설정을 위한 다이얼로그입니다."""
+    def __init__(self, config_dict, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Global Settings")
         self.setFixedWidth(500)
-        self._init_ui(rclone_path, conf_path)
+        self.config_dict = config_dict
+        self._init_ui()
 
-    def _init_ui(self, rclone_path, conf_path):
-        from PyQt6.QtWidgets import QFileDialog
+    def _init_ui(self):
         layout = QVBoxLayout(self)
-        form = QFormLayout()
         
-        # Rclone Path
-        self.rclone_edit = QLineEdit(rclone_path)
+        # 1. 경로 설정 그룹
+        path_group = QGroupBox("Rclone Paths")
+        path_layout = QFormLayout()
+        
+        self.rclone_edit = QLineEdit(self.config_dict.get("rclone_path", "rclone.exe"))
         rclone_btn = QPushButton("Browse...")
-        rclone_btn.clicked.connect(lambda: self._browse_file(self.rclone_edit, "Rclone Executable (rclone.exe)"))
+        rclone_btn.clicked.connect(lambda: self._browse_file(self.rclone_edit, "Rclone Executable"))
         h1 = QHBoxLayout()
         h1.addWidget(self.rclone_edit)
         h1.addWidget(rclone_btn)
         
-        # Config Path
-        self.conf_edit = QLineEdit(conf_path)
+        self.conf_edit = QLineEdit(self.config_dict.get("rclone_conf_path", ""))
         conf_btn = QPushButton("Browse...")
-        conf_btn.clicked.connect(lambda: self._browse_file(self.conf_edit, "Rclone Config (rclone.conf)"))
+        conf_btn.clicked.connect(lambda: self._browse_file(self.conf_edit, "Rclone Config"))
         h2 = QHBoxLayout()
         h2.addWidget(self.conf_edit)
         h2.addWidget(conf_btn)
         
-        form.addRow("Rclone.exe Path:", h1)
-        form.addRow("Rclone.conf Path:", h2)
-        layout.addLayout(form)
+        path_layout.addRow("Rclone.exe:", h1)
+        path_layout.addRow("Rclone.conf:", h2)
+        path_group.setLayout(path_layout)
+        layout.addWidget(path_group)
         
-        # Save / Cancel
+        # 2. 시스템 설정 그룹
+        sys_group = QGroupBox("System Settings")
+        sys_layout = QVBoxLayout()
+        self.auto_start_check = QCheckBox("윈도우 시작 시 자동 실행 (Auto Start)")
+        self.auto_start_check.setChecked(self.config_dict.get("auto_start", False))
+        
+        self.tray_start_check = QCheckBox("앱 실행 시 트레이로 시작 (Start minimized to Tray)")
+        self.tray_start_check.setChecked(self.config_dict.get("start_minimized", False))
+        
+        sys_layout.addWidget(self.auto_start_check)
+        sys_layout.addWidget(self.tray_start_check)
+        sys_group.setLayout(sys_layout)
+        layout.addWidget(sys_group)
+        
+        # 저장 / 취소
         btns = QHBoxLayout()
-        save = QPushButton("Save")
+        save = QPushButton("Save Settings")
+        save.setObjectName("MountButton")
         save.clicked.connect(self.accept)
         cancel = QPushButton("Cancel")
         cancel.clicked.connect(self.reject)
@@ -213,14 +238,19 @@ class GlobalSettingsDialog(QDialog):
             edit_widget.setText(path)
 
     def get_data(self):
-        return self.rclone_edit.text(), self.conf_edit.text()
+        return {
+            "rclone_path": self.rclone_edit.text(),
+            "rclone_conf_path": self.conf_edit.text(),
+            "auto_start": self.auto_start_check.isChecked(),
+            "start_minimized": self.tray_start_check.isChecked()
+        }
 
 class LDriveMainWindow(QMainWindow):
     """
     다중 마운트 대시보드 스타일의 메인 윈도우입니다.
     """
     add_requested = pyqtSignal()
-    settings_requested = pyqtSignal() # 전역 설정 요청 시그널 추가
+    settings_requested = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -239,7 +269,6 @@ class LDriveMainWindow(QMainWindow):
         title = QLabel("L-Drive Pro")
         title.setStyleSheet("font-size: 20pt; font-weight: bold; color: #3498db;")
         
-        btns_layout = QHBoxLayout()
         self.settings_btn = QPushButton("⚙ Settings")
         self.settings_btn.setFixedWidth(100)
         self.settings_btn.clicked.connect(self.settings_requested.emit)
@@ -258,7 +287,6 @@ class LDriveMainWindow(QMainWindow):
         # 중앙 카드 영역 (Scroll Area)
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
-        self.scroll.setStyleSheet("background-color: transparent; border: none;")
         
         self.container = QWidget()
         self.card_layout = QVBoxLayout(self.container)
@@ -267,13 +295,6 @@ class LDriveMainWindow(QMainWindow):
         
         self.scroll.setWidget(self.container)
         main_layout.addWidget(self.scroll)
-
-        # 환경 설정 영역 (하단)
-        meta_layout = QHBoxLayout()
-        self.auto_start_check = QCheckBox("Auto Start")
-        meta_layout.addStretch()
-        meta_layout.addWidget(self.auto_start_check)
-        main_layout.addLayout(meta_layout)
 
         # 로그 영역
         log_group = QGroupBox("Activity Logs")
@@ -294,7 +315,6 @@ class LDriveMainWindow(QMainWindow):
         self.card_layout.addWidget(card_widget)
 
     def _apply_styles(self):
-        # 라이트 테마 적용
         qss_path = self.resource_path(os.path.join("assets", "styles", "light_theme.qss"))
         if os.path.exists(qss_path):
             with open(qss_path, "r", encoding="utf-8") as f:

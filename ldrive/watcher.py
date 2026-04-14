@@ -17,7 +17,7 @@ class LDriveWatcher(QThread):
     status_changed = pyqtSignal(str)     # 상태 메시지 (예: "Connected", "Reconnecting...")
     log_emitted = pyqtSignal(str)        # 로그 메시지 (UI 로그 뷰어용)
 
-    def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, root_folder: str = "/", custom_args: str = ""):
+    def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, root_folder: str = "/", custom_args: str = "", volname: str = ""):
         super().__init__()
         self.engine = engine
         self.remote = remote
@@ -25,6 +25,7 @@ class LDriveWatcher(QThread):
         self.vfs_mode = vfs_mode
         self.root_folder = root_folder
         self.custom_args = custom_args
+        self.volname = volname
         
         self.is_running = True
         self.check_interval = 5  # 정상 상태일 때 체크 주기 (초)
@@ -90,7 +91,8 @@ class LDriveWatcher(QThread):
                 self.drive_letter, 
                 self.vfs_mode, 
                 self.root_folder, 
-                self.custom_args
+                self.custom_args,
+                self.volname
             )
             
             if success:
