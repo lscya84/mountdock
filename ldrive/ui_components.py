@@ -2,12 +2,13 @@ import os
 import string
 import sys
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QFileDialog,
     QFormLayout,
     QFrame,
     QHBoxLayout,
@@ -18,11 +19,77 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
-    QStyle,
     QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
 )
+
+
+def _make_line_icon(kind: str, color: str, size: int = 16) -> QIcon:
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    pen = QPen(QColor(color), 1.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+
+    if kind == "theme":
+        painter.drawArc(QRectF(3, 3, 10, 10), 40 * 16, 280 * 16)
+        painter.drawLine(QPointF(9.5, 1.8), QPointF(9.5, 4.0))
+        painter.drawLine(QPointF(14.2, 9.0), QPointF(12.0, 9.0))
+        painter.drawLine(QPointF(11.9, 4.1), QPointF(13.4, 2.6))
+    elif kind == "settings":
+        painter.drawRoundedRect(QRectF(3, 3, 10, 10), 3, 3)
+        painter.drawLine(QPointF(5, 6), QPointF(11, 6))
+        painter.drawLine(QPointF(5, 10), QPointF(11, 10))
+        painter.drawEllipse(QRectF(7.2, 4.6, 2.2, 2.2))
+        painter.drawEllipse(QRectF(5.5, 8.6, 2.2, 2.2))
+    elif kind == "add":
+        painter.drawEllipse(QRectF(2.5, 2.5, 11, 11))
+        painter.drawLine(QPointF(8, 5), QPointF(8, 11))
+        painter.drawLine(QPointF(5, 8), QPointF(11, 8))
+    elif kind == "play":
+        path = QPainterPath()
+        path.moveTo(5.2, 4.4)
+        path.lineTo(11.6, 8.0)
+        path.lineTo(5.2, 11.6)
+        path.closeSubpath()
+        painter.fillPath(path, QColor(color))
+    elif kind == "stop":
+        painter.fillRect(QRectF(4.4, 4.4, 7.2, 7.2), QColor(color))
+    elif kind == "edit":
+        path = QPainterPath()
+        path.moveTo(4.0, 11.8)
+        path.lineTo(5.5, 9.0)
+        path.lineTo(10.7, 3.8)
+        path.lineTo(12.2, 5.3)
+        path.lineTo(7.0, 10.5)
+        path.closeSubpath()
+        painter.fillPath(path, QColor(color))
+        painter.drawLine(QPointF(4.0, 11.8), QPointF(6.4, 11.1))
+    elif kind == "trash":
+        painter.drawLine(QPointF(5.2, 4.8), QPointF(10.8, 4.8))
+        painter.drawLine(QPointF(6.2, 4.8), QPointF(6.8, 12))
+        painter.drawLine(QPointF(9.2, 4.8), QPointF(8.8, 12))
+        painter.drawLine(QPointF(4.5, 4.8), QPointF(5.2, 12))
+        painter.drawLine(QPointF(11.5, 4.8), QPointF(10.8, 12))
+        painter.drawLine(QPointF(4.5, 4.8), QPointF(11.5, 4.8))
+        painter.drawLine(QPointF(6.2, 3.2), QPointF(9.8, 3.2))
+    elif kind == "folder":
+        path = QPainterPath()
+        path.moveTo(2.8, 5.5)
+        path.lineTo(6.0, 5.5)
+        path.lineTo(7.0, 4.0)
+        path.lineTo(13.2, 4.0)
+        path.lineTo(12.2, 12.2)
+        path.lineTo(3.8, 12.2)
+        path.closeSubpath()
+        painter.drawPath(path)
+
+    painter.end()
+    return QIcon(pixmap)
 
 
 class DriveSettingsDialog(QDialog):
@@ -109,6 +176,7 @@ class DriveCardWidget(QFrame):
         super().__init__()
         self.profile = profile
         self.is_running = False
+        self.current_theme = "light"
         self.setObjectName("DriveCard")
         self._init_ui()
 
@@ -118,6 +186,11 @@ class DriveCardWidget(QFrame):
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(8)
 
+        self.status_dot = QLabel("")
+        self.status_dot.setObjectName("StatusDot")
+        self.status_dot.setFixedSize(10, 10)
+        layout.addWidget(self.status_dot, 0, Qt.AlignmentFlag.AlignVCenter)
+
         self.badge = QLabel(self.profile["letter"])
         self.badge.setObjectName("LetterBadge")
         self.badge.setFixedSize(32, 32)
@@ -126,8 +199,8 @@ class DriveCardWidget(QFrame):
 
         info_layout = QVBoxLayout()
         info_layout.setSpacing(2)
-
         display_name = self.profile.get("volname") or self.profile["remote"]
+
         self.name_label = QLabel(display_name)
         self.name_label.setObjectName("CardTitle")
         self.name_label.setWordWrap(True)
@@ -139,52 +212,66 @@ class DriveCardWidget(QFrame):
         info_layout.addWidget(self.path_label)
         layout.addLayout(info_layout, 1)
 
-        self.status_dot = QLabel("")
-        self.status_dot.setObjectName("StatusDot")
-        self.status_dot.setFixedSize(10, 10)
-        layout.addWidget(self.status_dot, 0, Qt.AlignmentFlag.AlignVCenter)
-
-        self.toggle_btn = self._make_icon_button(QStyle.StandardPixmap.SP_MediaPlay, "Connect")
+        self.toggle_btn = self._make_icon_button("play", "Connect")
         self.toggle_btn.clicked.connect(self._on_toggle)
         layout.addWidget(self.toggle_btn)
 
-        self.edit_btn = self._make_icon_button(QStyle.StandardPixmap.SP_FileDialogDetailedView, "Edit")
+        self.edit_btn = self._make_icon_button("edit", "Edit")
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
         layout.addWidget(self.edit_btn)
 
-        self.delete_btn = self._make_icon_button(QStyle.StandardPixmap.SP_TrashIcon, "Delete", danger=True)
+        self.delete_btn = self._make_icon_button("trash", "Delete", danger=True)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
         layout.addWidget(self.delete_btn)
 
         self.set_status("Disconnected")
 
-    def _make_icon_button(self, icon_type, tooltip, danger=False):
+    def _make_icon_button(self, kind, tooltip, danger=False):
         button = QPushButton("")
+        button.icon_kind = kind
+        button.icon_role = "danger" if danger else "ghost"
         button.setObjectName("GhostDangerBtn" if danger else "GhostBtn")
-        button.setIcon(self.style().standardIcon(icon_type))
         button.setToolTip(tooltip)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setFixedSize(28, 28)
         return button
+
+    def refresh_icons(self, theme_name="light"):
+        self.current_theme = theme_name
+        colors = {
+            "light": {"ghost": "#5F7087", "danger": "#B33A33", "accent": "#FFFFFF"},
+            "dark": {"ghost": "#DCE8F5", "danger": "#FFD2CC", "accent": "#FFFFFF"},
+        }
+        palette = colors["dark" if theme_name == "dark" else "light"]
+
+        for button in (self.toggle_btn, self.edit_btn, self.delete_btn):
+            role = getattr(button, "icon_role", "ghost")
+            icon_kind = getattr(button, "icon_kind", "play")
+            color = palette["ghost"]
+            if role == "danger":
+                color = palette["danger"]
+            if button.objectName() in {"AccentBtn", "DangerBtn"}:
+                color = palette["accent"]
+            button.setIcon(_make_line_icon(icon_kind, color))
 
     def _on_toggle(self):
         self.toggle_requested.emit(self.profile["id"], not self.is_running)
 
     def set_status(self, status):
         if status == "Connected":
-            self.toggle_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop))
+            self.toggle_btn.icon_kind = "stop"
             self.toggle_btn.setToolTip("Disconnect")
             self.toggle_btn.setObjectName("DangerBtn")
             self.status_dot.setProperty("state", "connected")
             self.is_running = True
         elif status == "Admin Block":
-            self.toggle_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+            self.toggle_btn.icon_kind = "play"
             self.toggle_btn.setToolTip("Connect")
             self.toggle_btn.setObjectName("GhostBtn")
             self.status_dot.setProperty("state", "blocked")
             self.is_running = False
         else:
-            self.toggle_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+            self.toggle_btn.icon_kind = "play"
             self.toggle_btn.setToolTip("Connect")
             self.toggle_btn.setObjectName("AccentBtn" if status == "Disconnected" else "GhostBtn")
             self.status_dot.setProperty("state", "idle" if status == "Disconnected" else "busy")
@@ -194,6 +281,7 @@ class DriveCardWidget(QFrame):
         self.toggle_btn.style().polish(self.toggle_btn)
         self.status_dot.style().unpolish(self.status_dot)
         self.status_dot.style().polish(self.status_dot)
+        self.refresh_icons(self.current_theme)
 
 
 class GlobalSettingsDialog(QDialog):
@@ -222,8 +310,8 @@ class GlobalSettingsDialog(QDialog):
         self.theme_combo.addItems(["light", "dark"])
         self.theme_combo.setCurrentText(self.config_data.get("theme", "light"))
 
-        form.addRow("rclone", self.rclone_path_edit)
-        form.addRow("config", self.rclone_conf_edit)
+        form.addRow("rclone", self._build_picker_row(self.rclone_path_edit, "file"))
+        form.addRow("config", self._build_picker_row(self.rclone_conf_edit, "file"))
         form.addRow("theme", self.theme_combo)
         layout.addLayout(form)
 
@@ -250,6 +338,40 @@ class GlobalSettingsDialog(QDialog):
         buttons.addWidget(cancel)
         buttons.addWidget(save)
         layout.addLayout(buttons)
+        self.refresh_icons(self.config_data.get("theme", "light"))
+
+    def _build_picker_row(self, line_edit, mode):
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(line_edit, 1)
+
+        button = QPushButton("")
+        button.setObjectName("GhostBtn")
+        button.setFixedSize(30, 30)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.icon_kind = "folder"
+        button.icon_role = "ghost"
+        button.clicked.connect(lambda: self._browse_path(line_edit, mode))
+        layout.addWidget(button)
+        line_edit.browse_button = button
+        return row
+
+    def _browse_path(self, target_edit, mode):
+        current = target_edit.text().strip()
+        start = current or os.path.expanduser("~")
+        if mode == "file":
+            selected, _ = QFileDialog.getOpenFileName(self, "Select File", start)
+        else:
+            selected = QFileDialog.getExistingDirectory(self, "Select Folder", start)
+        if selected:
+            target_edit.setText(selected)
+
+    def refresh_icons(self, theme_name="light"):
+        color = "#DCE8F5" if theme_name == "dark" else "#5F7087"
+        for edit in (self.rclone_path_edit, self.rclone_conf_edit):
+            edit.browse_button.setIcon(_make_line_icon("folder", color))
 
     def get_data(self):
         return {
@@ -268,6 +390,7 @@ class LDriveMainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.current_theme = "light"
         self.setWindowTitle("L-Drive")
         self.setMinimumSize(460, 330)
         self.resize(500, 360)
@@ -292,17 +415,16 @@ class LDriveMainWindow(QMainWindow):
         top_layout.addWidget(title)
         top_layout.addStretch()
 
-        theme_btn = self._make_top_icon_button(QStyle.StandardPixmap.SP_BrowserReload, "Theme")
-        theme_btn.clicked.connect(self.theme_toggle_requested.emit)
-        settings_btn = self._make_top_icon_button(QStyle.StandardPixmap.SP_FileDialogContentsView, "Settings")
-        settings_btn.clicked.connect(self.settings_requested.emit)
-        add_btn = self._make_top_icon_button(QStyle.StandardPixmap.SP_FileDialogNewFolder, "Add")
-        add_btn.setObjectName("AccentBtn")
-        add_btn.clicked.connect(self.add_requested.emit)
+        self.theme_btn = self._make_top_icon_button("theme", "Theme")
+        self.theme_btn.clicked.connect(self.theme_toggle_requested.emit)
+        self.settings_btn = self._make_top_icon_button("settings", "Settings")
+        self.settings_btn.clicked.connect(self.settings_requested.emit)
+        self.add_btn = self._make_top_icon_button("add", "Add", accent=True)
+        self.add_btn.clicked.connect(self.add_requested.emit)
 
-        top_layout.addWidget(theme_btn)
-        top_layout.addWidget(settings_btn)
-        top_layout.addWidget(add_btn)
+        top_layout.addWidget(self.theme_btn)
+        top_layout.addWidget(self.settings_btn)
+        top_layout.addWidget(self.add_btn)
         main_layout.addWidget(top_bar)
 
         self.warning_banner = QLabel("")
@@ -329,15 +451,34 @@ class LDriveMainWindow(QMainWindow):
         self.log_viewer.setReadOnly(True)
         self.log_viewer.setFixedHeight(58)
         main_layout.addWidget(self.log_viewer)
+        self.refresh_icons("light")
 
-    def _make_top_icon_button(self, icon_type, tooltip):
+    def _make_top_icon_button(self, kind, tooltip, accent=False):
         button = QPushButton("")
-        button.setObjectName("GhostBtn")
-        button.setIcon(self.style().standardIcon(icon_type))
+        button.icon_kind = kind
+        button.icon_role = "accent" if accent else "ghost"
+        button.setObjectName("AccentBtn" if accent else "GhostBtn")
         button.setToolTip(tooltip)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setFixedSize(28, 28)
         return button
+
+    def refresh_icons(self, theme_name="light"):
+        self.current_theme = theme_name
+        palette = {
+            "light": {"ghost": "#5F7087", "accent": "#FFFFFF"},
+            "dark": {"ghost": "#DCE8F5", "accent": "#FFFFFF"},
+        }["dark" if theme_name == "dark" else "light"]
+
+        for button in (self.theme_btn, self.settings_btn, self.add_btn):
+            role = button.icon_role
+            color = palette["accent"] if role == "accent" else palette["ghost"]
+            button.setIcon(_make_line_icon(button.icon_kind, color))
+
+        for i in range(self.card_layout.count()):
+            widget = self.card_layout.itemAt(i).widget()
+            if isinstance(widget, DriveCardWidget):
+                widget.refresh_icons(theme_name)
 
     def clear_cards(self):
         while self.card_layout.count():
@@ -346,6 +487,7 @@ class LDriveMainWindow(QMainWindow):
                 item.widget().deleteLater()
 
     def add_card(self, card_widget):
+        card_widget.refresh_icons(self.current_theme)
         self.card_layout.addWidget(card_widget)
 
     def set_warning_banner(self, message: str):
@@ -365,7 +507,7 @@ class LDriveMainWindow(QMainWindow):
 
         add_btn = QPushButton("")
         add_btn.setObjectName("AccentBtn")
-        add_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
+        add_btn.setIcon(_make_line_icon("add", "#FFFFFF"))
         add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         add_btn.setFixedSize(34, 30)
         add_btn.clicked.connect(self.add_requested.emit)
@@ -382,6 +524,7 @@ class LDriveMainWindow(QMainWindow):
         if os.path.exists(qss_path):
             with open(qss_path, "r", encoding="utf-8") as file:
                 self.setStyleSheet(file.read())
+        self.refresh_icons(theme_name)
 
     @staticmethod
     def resource_path(relative_path):

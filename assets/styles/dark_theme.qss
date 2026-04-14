@@ -5,6 +5,10 @@ QWidget {
     font-size: 8.5pt;
 }
 
+QLabel {
+    background: transparent;
+}
+
 QMainWindow, QWidget#AppShell {
     background: #11161d;
 }
@@ -94,6 +98,13 @@ QPushButton#GhostBtn {
     background: rgba(255, 255, 255, 0.05);
     color: #f0f4fa;
     border-color: rgba(220, 232, 247, 0.12);
+}
+
+QPushButton#GhostBtn:hover,
+QPushButton#GhostDangerBtn:hover,
+QPushButton#AccentBtn:hover,
+QPushButton#DangerBtn:hover {
+    border-color: rgba(220, 232, 247, 0.20);
 }
 
 QPushButton#GhostDangerBtn {
