@@ -6,7 +6,7 @@ from PyQt6.QtGui import QIcon, QAction
 
 from ldrive.config_manager import ConfigManager
 from ldrive.rclone_engine import RcloneEngine
-from ldrive.ui_components import LDriveMainWindow, LDriveTrayIcon, DriveCardWidget, DriveSettingsDialog
+from ldrive.ui_components import LDriveMainWindow, LDriveTrayIcon, DriveCardWidget, DriveSettingsDialog, GlobalSettingsDialog
 from ldrive.watcher import LDriveWatcher
 
 # 로거 설정
