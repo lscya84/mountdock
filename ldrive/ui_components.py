@@ -100,19 +100,19 @@ class DriveCardWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setMinimumHeight(110)
+        self.setMinimumHeight(78)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(14)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(8)
 
         self.badge = QLabel(self.profile['letter'])
         self.badge.setObjectName("LetterBadge")
-        self.badge.setFixedSize(46, 46)
+        self.badge.setFixedSize(34, 34)
         self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.badge)
 
         info_layout = QVBoxLayout()
-        info_layout.setSpacing(4)
+        info_layout.setSpacing(2)
         info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         name_val = self.profile.get('volname') or self.profile['remote']
@@ -131,7 +131,7 @@ class DriveCardWidget(QFrame):
         self.path_label.setObjectName("CardFootnote")
 
         meta_row = QHBoxLayout()
-        meta_row.setSpacing(8)
+        meta_row.setSpacing(6)
         meta_row.addWidget(self.remote_label)
         meta_row.addWidget(self.status_label, 0, Qt.AlignmentFlag.AlignLeft)
         meta_row.addStretch()
@@ -144,28 +144,28 @@ class DriveCardWidget(QFrame):
         layout.addStretch()
 
         action_col = QVBoxLayout()
-        action_col.setSpacing(8)
+        action_col.setSpacing(6)
         action_col.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self.toggle_btn = QPushButton("Connect")
         self.toggle_btn.setObjectName("AccentBtn")
-        self.toggle_btn.setFixedSize(110, 34)
+        self.toggle_btn.setFixedSize(84, 28)
         self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.toggle_btn.clicked.connect(self._on_toggle)
         action_col.addWidget(self.toggle_btn)
 
         sub_row = QHBoxLayout()
-        sub_row.setSpacing(6)
+        sub_row.setSpacing(4)
 
         self.edit_btn = QPushButton("Edit")
         self.edit_btn.setObjectName("GhostBtn")
-        self.edit_btn.setFixedSize(62, 30)
+        self.edit_btn.setFixedSize(46, 24)
         self.edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
 
         self.delete_btn = QPushButton("Delete")
         self.delete_btn.setObjectName("GhostDangerBtn")
-        self.delete_btn.setFixedSize(68, 30)
+        self.delete_btn.setFixedSize(52, 24)
         self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
 
@@ -276,8 +276,8 @@ class LDriveMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("L-Drive")
-        self.setMinimumSize(720, 560)
-        self.resize(780, 620)
+        self.setMinimumSize(520, 390)
+        self.resize(560, 430)
         self._init_ui()
 
     def _init_ui(self):
@@ -285,25 +285,25 @@ class LDriveMainWindow(QMainWindow):
         central.setObjectName("AppShell")
         self.setCentralWidget(central)
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(16, 16, 16, 16)
-        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(12, 12, 12, 12)
+        main_layout.setSpacing(10)
 
         hero = QFrame()
         hero.setObjectName("HeroPanel")
         hero_layout = QVBoxLayout(hero)
-        hero_layout.setContentsMargins(18, 16, 18, 16)
-        hero_layout.setSpacing(14)
+        hero_layout.setContentsMargins(14, 12, 14, 12)
+        hero_layout.setSpacing(10)
 
         top_bar = QHBoxLayout()
         top_bar.setSpacing(8)
 
         title_wrap = QVBoxLayout()
-        title_wrap.setSpacing(2)
-        eyebrow = QLabel("Rclone Mount Manager")
+        title_wrap.setSpacing(1)
+        eyebrow = QLabel("Mini Mount Utility")
         eyebrow.setObjectName("EyebrowLabel")
-        title = QLabel("L-Drive Console")
+        title = QLabel("L-Drive")
         title.setObjectName("AppTitleHeader")
-        subtitle = QLabel("Professional Windows mount orchestration for remote storage volumes.")
+        subtitle = QLabel("Compact rclone drive manager")
         subtitle.setObjectName("AppSubtitle")
         subtitle.setWordWrap(True)
         title_wrap.addWidget(eyebrow)
@@ -316,19 +316,19 @@ class LDriveMainWindow(QMainWindow):
 
         theme_btn = QPushButton("Theme")
         theme_btn.setObjectName("GhostBtn")
-        theme_btn.setFixedHeight(32)
+        theme_btn.setFixedHeight(28)
         theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         theme_btn.clicked.connect(self.theme_toggle_requested.emit)
 
         settings_btn = QPushButton("Settings")
         settings_btn.setObjectName("GhostBtn")
-        settings_btn.setFixedHeight(32)
+        settings_btn.setFixedHeight(28)
         settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         settings_btn.clicked.connect(self.settings_requested.emit)
 
         add_btn = QPushButton("Add Drive")
         add_btn.setObjectName("AccentBtn")
-        add_btn.setFixedHeight(32)
+        add_btn.setFixedHeight(28)
         add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         add_btn.clicked.connect(self.add_requested.emit)
 
@@ -339,14 +339,20 @@ class LDriveMainWindow(QMainWindow):
         hero_layout.addLayout(top_bar)
 
         stats_row = QHBoxLayout()
-        stats_row.setSpacing(10)
-        self.total_stat = self._create_stat_card("Configured Drives", "0")
-        self.active_stat = self._create_stat_card("Connected Sessions", "0")
-        self.theme_stat = self._create_stat_card("Current Theme", "Light")
+        stats_row.setSpacing(6)
+        self.total_stat = self._create_stat_card("Drives", "0")
+        self.active_stat = self._create_stat_card("Active", "0")
+        self.theme_stat = self._create_stat_card("Theme", "Light")
         stats_row.addWidget(self.total_stat)
         stats_row.addWidget(self.active_stat)
         stats_row.addWidget(self.theme_stat)
         hero_layout.addLayout(stats_row)
+
+        self.warning_banner = QLabel("")
+        self.warning_banner.setObjectName("WarningBanner")
+        self.warning_banner.setWordWrap(True)
+        self.warning_banner.hide()
+        hero_layout.addWidget(self.warning_banner)
         main_layout.addWidget(hero)
 
         self.scroll = QScrollArea()
@@ -357,7 +363,7 @@ class LDriveMainWindow(QMainWindow):
         self.container.setObjectName("DriveListHost")
         self.card_layout = QVBoxLayout(self.container)
         self.card_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.card_layout.setSpacing(10)
+        self.card_layout.setSpacing(8)
         self.card_layout.setContentsMargins(0, 0, 0, 0)
 
         self.scroll.setWidget(self.container)
@@ -366,15 +372,15 @@ class LDriveMainWindow(QMainWindow):
         log_panel = QFrame()
         log_panel.setObjectName("LogPanel")
         log_layout = QVBoxLayout(log_panel)
-        log_layout.setContentsMargins(16, 14, 16, 14)
-        log_layout.setSpacing(10)
+        log_layout.setContentsMargins(12, 10, 12, 10)
+        log_layout.setSpacing(8)
 
         log_header = QHBoxLayout()
         log_title_wrap = QVBoxLayout()
-        log_title_wrap.setSpacing(2)
-        log_title = QLabel("Activity")
+        log_title_wrap.setSpacing(0)
+        log_title = QLabel("Log")
         log_title.setObjectName("SectionTitle")
-        log_subtitle = QLabel("Recent mount, recovery, and runtime events.")
+        log_subtitle = QLabel("Recent runtime events")
         log_subtitle.setObjectName("SectionSubtitle")
         log_title_wrap.addWidget(log_title)
         log_title_wrap.addWidget(log_subtitle)
@@ -383,7 +389,7 @@ class LDriveMainWindow(QMainWindow):
 
         clear_log_btn = QPushButton("Clear")
         clear_log_btn.setObjectName("GhostBtn")
-        clear_log_btn.setFixedHeight(28)
+        clear_log_btn.setFixedHeight(26)
         clear_log_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         clear_log_btn.clicked.connect(lambda: self.log_viewer.clear())
         log_header.addWidget(clear_log_btn)
@@ -393,7 +399,7 @@ class LDriveMainWindow(QMainWindow):
         self.log_viewer = QPlainTextEdit()
         self.log_viewer.setObjectName("ActivityMonitor")
         self.log_viewer.setReadOnly(True)
-        self.log_viewer.setFixedHeight(112)
+        self.log_viewer.setFixedHeight(72)
         log_layout.addWidget(self.log_viewer)
         main_layout.addWidget(log_panel)
 
@@ -403,8 +409,8 @@ class LDriveMainWindow(QMainWindow):
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(2)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(1)
 
         label = QLabel(label_text)
         label.setObjectName("StatLabel")
@@ -423,6 +429,10 @@ class LDriveMainWindow(QMainWindow):
 
     def add_card(self, card_widget):
         self.card_layout.addWidget(card_widget)
+
+    def set_warning_banner(self, message: str):
+        self.warning_banner.setText(message)
+        self.warning_banner.setVisible(bool(message))
 
     def show_empty_state(self):
         empty = QFrame()

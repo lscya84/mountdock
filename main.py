@@ -1,52 +1,61 @@
-import sys
+import ctypes
 import os
-import logging
-import subprocess
-from PyQt6.QtWidgets import QApplication, QStyle, QMessageBox, QSystemTrayIcon
-from PyQt6.QtGui import QIcon, QAction
+import sys
+
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
 from ldrive.config_manager import ConfigManager
 from ldrive.rclone_engine import RcloneEngine
-from ldrive.ui_components import LDriveMainWindow, LDriveTrayIcon, DriveCardWidget, DriveSettingsDialog, GlobalSettingsDialog
+from ldrive.ui_components import (
+    DriveCardWidget,
+    DriveSettingsDialog,
+    GlobalSettingsDialog,
+    LDriveMainWindow,
+    LDriveTrayIcon,
+)
 from ldrive.watcher import LDriveWatcher
 
-# 로거 설정
-logger = logging.getLogger("Main")
 
 class LDriveApp:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
+        self.is_admin = self._is_running_as_admin()
 
-        # 1. 코어 초기화
         self.config = ConfigManager()
-        self.engine = RcloneEngine(self.config.get("rclone_path", "rclone.exe"), 
-                                   self.config.get("rclone_conf_path", ""))
-        
-        # 2. UI 초기화
+        self.engine = RcloneEngine(
+            self.config.get("rclone_path", "rclone.exe"),
+            self.config.get("rclone_conf_path", ""),
+        )
         self.window = LDriveMainWindow()
-        
+
         icon_path = LDriveMainWindow.resource_path(os.path.join("assets", "icon.ico"))
-        self.default_icon = QIcon(icon_path) if os.path.exists(icon_path) else self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
+        self.default_icon = (
+            QIcon(icon_path)
+            if os.path.exists(icon_path)
+            else self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
+        )
         self.window.setWindowIcon(self.default_icon)
-        
+
+        if self.is_admin:
+            admin_message = (
+                "관리자 권한으로 실행 중입니다. 이 상태에서 만든 드라이브는 일반 Windows 탐색기에서 "
+                "보이지 않을 수 있습니다. 일반 권한으로 다시 실행하세요."
+            )
+            self.window.set_warning_banner(admin_message)
+            self.window.append_log(f"[Warning] {admin_message}")
+
         self.tray = LDriveTrayIcon(self.default_icon)
         self.tray.show()
-
-        # 3. 다중 스레드 관리
         self.watchers = {}
 
-        # 4. 앱 바인딩
         self._wire_signals()
-        
-        # 5. 초기 테마 적용
+
         current_theme = self.config.get("theme", "light")
         self.window._apply_styles(current_theme)
-
-        # 6. 대시보드 로드
         self._setup_dashboards()
-        
-        # 7. 실행 모드
+
         if self.config.get("start_minimized"):
             self.window.hide()
         else:
@@ -65,43 +74,56 @@ class LDriveApp:
         self.config.set("theme", theme)
         self.window._apply_styles(theme)
         self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), theme)
+        if self.is_admin:
+            self.window.set_warning_banner(
+                "관리자 권한으로 실행 중입니다. 일반 Windows 탐색기 호환을 위해 일반 권한으로 다시 실행하세요."
+            )
 
     def _show_window(self):
         self.window.show()
-        self.window.raise_(); self.window.activateWindow()
+        self.window.raise_()
+        self.window.activateWindow()
 
     def _on_close_event(self, event):
-        self.exit_app(); event.accept()
+        self.exit_app()
+        event.accept()
 
     def handle_settings(self):
         dialog = GlobalSettingsDialog(self.config.config, self.window)
         if dialog.exec():
             data = dialog.get_data()
-            for k, v in data.items():
-                if k == "auto_start": self.config.set_auto_start(v)
-                else: self.config.set(k, v)
+            for key, value in data.items():
+                if key == "auto_start":
+                    self.config.set_auto_start(value)
+                else:
+                    self.config.set(key, value)
             self.engine.set_paths(data["rclone_path"], data["rclone_conf_path"])
             self.window.append_log("Settings saved.")
-            self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), self.config.get("theme", "light"))
+            self.window.update_overview(
+                len(self.config.get_profiles()),
+                len(self.watchers),
+                self.config.get("theme", "light"),
+            )
 
     def _setup_dashboards(self):
         self.window.clear_cards()
         profiles = self.config.get_profiles()
         active_count = len(self.watchers)
+
         if not profiles:
             self.window.show_empty_state()
             self.window.update_overview(0, active_count, self.config.get("theme", "light"))
             return
-            
+
         for profile in profiles:
             card = DriveCardWidget(profile)
             card.toggle_requested.connect(self.handle_toggle_mount)
             card.edit_requested.connect(self.handle_edit_drive)
             card.delete_requested.connect(self.handle_delete_drive)
-            # 이미 실행 중인 경우 상태 동기화 (Watcher가 관리 중이라면)
             if profile["id"] in self.watchers:
                 card.set_status("Connected")
             self.window.add_card(card)
+
         self.window.update_overview(len(profiles), active_count, self.config.get("theme", "light"))
 
     def handle_add_drive(self):
@@ -112,58 +134,102 @@ class LDriveApp:
 
     def handle_edit_drive(self, pid):
         profile = next((p for p in self.config.get_profiles() if p["id"] == pid), None)
-        if not profile: return
+        if not profile:
+            return
         if pid in self.watchers:
             QMessageBox.warning(self.window, "Error", "Stop drive before editing.")
             return
+
         dialog = DriveSettingsDialog(self.engine.get_remotes(), self.window, profile)
         if dialog.exec():
             self.config.update_profile(pid, dialog.get_data())
             self._setup_dashboards()
 
     def handle_delete_drive(self, pid):
-        if pid in self.watchers: self.handle_toggle_mount(pid, False)
+        if pid in self.watchers:
+            self.handle_toggle_mount(pid, False)
         self.config.delete_profile(pid)
         self._setup_dashboards()
 
     def handle_toggle_mount(self, pid, should_start):
         profile = next((p for p in self.config.get_profiles() if p["id"] == pid), None)
         card = self._find_card(pid)
-        if not card: return
+        if not profile or not card:
+            return
 
         if should_start:
-            proc = self.engine.mount(profile["remote"], profile["letter"], 
-                                    profile["vfs_mode"], profile["root_folder"], 
-                                    profile.get("custom_args", ""), profile.get("volname", ""))
-            if proc:
-                watcher = LDriveWatcher(self.engine, profile["remote"], profile["letter"],
-                                        profile["vfs_mode"], profile["root_folder"], 
-                                        profile.get("custom_args", ""), profile.get("volname", ""))
+            if self.is_admin:
+                self.window.append_log("[Blocked] 관리자 권한 실행 중이라 마운트를 차단했습니다.")
+                QMessageBox.warning(
+                    self.window,
+                    "Run Without Administrator",
+                    "관리자 권한으로 실행 중이면 마운트 드라이브가 일반 Windows 탐색기에서 보이지 않을 수 있습니다.\n\n"
+                    "L-Drive를 일반 권한으로 다시 실행한 뒤 마운트하세요.",
+                )
+                card.set_status("Admin Block")
+                return
+
+            process = self.engine.mount(
+                profile["remote"],
+                profile["letter"],
+                profile["vfs_mode"],
+                profile["root_folder"],
+                profile.get("custom_args", ""),
+                profile.get("volname", ""),
+            )
+            if process:
+                watcher = LDriveWatcher(
+                    self.engine,
+                    profile["remote"],
+                    profile["letter"],
+                    profile["vfs_mode"],
+                    profile["root_folder"],
+                    profile.get("custom_args", ""),
+                    profile.get("volname", ""),
+                )
                 watcher.status_changed.connect(card.set_status)
                 watcher.log_emitted.connect(self.window.append_log)
                 watcher.start()
                 self.watchers[pid] = watcher
-                self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), self.config.get("theme", "light"))
+                self.window.update_overview(
+                    len(self.config.get_profiles()),
+                    len(self.watchers),
+                    self.config.get("theme", "light"),
+                )
             else:
                 self.window.append_log(f"Mount Error: {self.engine.last_error}")
                 QMessageBox.critical(self.window, "Mount Failed", f"Rclone Error:\n\n{self.engine.last_error}")
         else:
             if pid in self.watchers:
-                self.watchers[pid].stop(); del self.watchers[pid]
+                self.watchers[pid].stop()
+                del self.watchers[pid]
             self.engine.unmount(profile["letter"])
             card.set_status("Disconnected")
-            self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), self.config.get("theme", "light"))
+            self.window.update_overview(
+                len(self.config.get_profiles()),
+                len(self.watchers),
+                self.config.get("theme", "light"),
+            )
 
     def _find_card(self, pid):
         for i in range(self.window.card_layout.count()):
-            w = self.window.card_layout.itemAt(i).widget()
-            if isinstance(w, DriveCardWidget) and w.profile["id"] == pid: return w
+            widget = self.window.card_layout.itemAt(i).widget()
+            if isinstance(widget, DriveCardWidget) and widget.profile["id"] == pid:
+                return widget
         return None
 
     def exit_app(self):
-        for w in self.watchers.values(): w.stop()
+        for watcher in self.watchers.values():
+            watcher.stop()
         self.engine.kill_all_mounts()
         self.app.quit()
+
+    def _is_running_as_admin(self):
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except Exception:
+            return False
+
 
 if __name__ == "__main__":
     LDriveApp().app.exec()
