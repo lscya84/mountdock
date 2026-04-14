@@ -9,8 +9,8 @@ from ldrive.rclone_engine import RcloneEngine
 logger = logging.getLogger("Watcher")
 
 class LDriveWatcher(QThread):
-    status_changed = pyqtSignal(str) # UI 카드 상태 업데이트
-    log_emitted = pyqtSignal(str)     # 메인 창 로그창 업데이트
+    status_changed = pyqtSignal(str)
+    log_emitted = pyqtSignal(str)
 
     def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, 
                  root_folder: str = "/", custom_args: str = "", volname: str = ""):
@@ -24,61 +24,57 @@ class LDriveWatcher(QThread):
         self.volname = volname
         
         self.is_running = True
-        self.check_interval = 5
-        self.max_backoff = 30
         self.drive_path = f"{self.drive_letter.upper()}:\\"
 
     def run(self):
-        logger.info(f"Watcher 스레드 시작: {self.remote}")
+        logger.info(f"Watcher 시작: {self.remote} -> {self.drive_letter}:")
         
-        # 1차 부팅 체크 (최초 마운트 성공 루프)
-        if not self._wait_and_check_alive(wait_sec=8):
+        # 1. 초기 5초간 집중 생존 모니터링
+        if not self._initial_check():
             return
 
+        # 2. 메인 감시 루프
         while self.is_running:
             if self._check_connection():
                 self.status_changed.emit("Connected")
-                self.msleep(self.check_interval * 1000)
+                self.msleep(5000) # 5초 간격 체크
             else:
+                self.status_changed.emit("Broken")
                 self._handle_reconnect()
 
-    def _wait_and_check_alive(self, wait_sec=10) -> bool:
-        """ rclone 프로세스 상태와 드라이브 노출 여부를 동시 검증합니다. """
-        for i in range(wait_sec):
+    def _initial_check(self) -> bool:
+        """ 드라이브가 올라올 때까지 프로세스 생사 여부를 초단위로 확인합니다. """
+        for i in range(10): # 최대 10초 대기
             if not self.is_running: return False
             
-            # 프로세스 사후 검증
+            # 프로세스 즉시 사망 체크
             if not self.engine.is_process_alive(self.drive_letter):
-                err = self.engine.last_error
-                self.log_emitted.emit(f"[Fatal] {self.remote} rclone 프로세스 종료")
-                if err: self.log_emitted.emit(f"Rclone 치명적 오류: {err[:200]}")
-                self.status_changed.emit("Error")
+                err = self.engine.last_error_msg
+                msg = f"[Error] Rclone 프로세스 즉시 종료됨: {err[:200]}" if err else f"[Error] {self.remote} 마운트 중 프로세스가 죽었습니다."
+                self.log_emitted.emit(msg)
+                self.status_changed.emit("Fatal")
                 return False
             
-            # 드라이브 확인 (os.path + psutil 교차 검증)
+            # 드라이브 탐지 성공 여부
             if self._check_drive_exists():
+                self.log_emitted.emit(f"[Success] {self.drive_letter}: 드라이브 연결 완료.")
                 self.status_changed.emit("Connected")
                 return True
-            else:
-                self.status_changed.emit("Mounting...")
                 
+            self.status_changed.emit("Wait...")
             self.msleep(1000)
-        
-        self.log_emitted.emit(f"[Timeout] {self.remote} 드라이브 발견 실패 ({wait_sec}초 경과)")
+            
+        self.log_emitted.emit(f"[Timeout] {self.remote} 드라이브 발견 시간 초과.")
         return False
 
     def _check_connection(self) -> bool:
-        # 프로세스 생리 상태 체크
         if not self.engine.is_process_alive(self.drive_letter):
             return False
-        # 드라이브 실재 여부 체크
         return self._check_drive_exists()
 
     def _check_drive_exists(self) -> bool:
-        """ OS에 마운트 지점이 성공적으로 열렸는지 확인합니다. """
         if os.path.exists(self.drive_path) or os.path.exists(self.drive_path.rstrip("\\")):
             return True
-        # 보조 체크 (psutil)
         try:
             for p in psutil.disk_partitions():
                 if p.mountpoint.upper().startswith(f"{self.drive_letter.upper()}:"):
@@ -86,32 +82,24 @@ class LDriveWatcher(QThread):
         except: pass
         return False
 
-    def _is_network_available(self) -> bool:
-        try:
-            socket.setdefaulttimeout(3)
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("8.8.8.8", 53))
-            return True
-        except: return False
-
     def _handle_reconnect(self):
-        backoff = 1
+        backoff = 2
         self.engine.unmount(self.drive_letter)
         
         while self.is_running:
-            self.status_changed.emit(f"Repairing ({backoff}s...)")
-            self.log_emitted.emit(f"[Repair] {self.remote} 재연결 시도 중...")
+            self.status_changed.emit(f"Repair ({backoff}s)")
+            self.log_emitted.emit(f"[Watcher] {self.remote} 재연결 시도 중...")
             
-            res = self.engine.mount(
+            success = self.engine.mount(
                 self.remote, self.drive_letter, self.vfs_mode, 
                 self.root_folder, self.custom_args, self.volname
             )
             
-            if res and self._wait_and_check_alive(wait_sec=10):
-                self.log_emitted.emit(f"[Success] {self.remote} 재연결 성공!")
+            if success and self._initial_check():
                 break
             
             self.msleep(backoff * 1000)
-            backoff = min(backoff * 2, self.max_backoff)
+            backoff = min(backoff * 2, 30)
 
     def stop(self):
         self.is_running = False

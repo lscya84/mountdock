@@ -1,8 +1,8 @@
-/* Native Windows 11 Style Light Theme */
+/* Windows 11 Modern Light Theme */
 QWidget {
-    background-color: #F3F3F3; /* Windows 11 Page Background */
+    background-color: #F3F3F3;
     color: #000000;
-    font-family: 'Segoe UI Variable Text', -apple-system, sans-serif;
+    font-family: 'Segoe UI Variable Text', 'Malgun Gothic', sans-serif;
     font-size: 10pt;
 }
 
@@ -16,24 +16,25 @@ QMainWindow {
     color: #000000;
 }
 
-/* Row Styling (Windows Settings Card) */
-#DriveRow {
+/* Card Row */
+#DriveCard {
     background-color: #FFFFFF;
-    border: 1px solid #E0E0E0;
-    border-radius: 6px;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
 }
 
 #LetterIcon {
-    background-color: #F8F8F8;
-    color: #444444;
-    border-radius: 4px;
+    background-color: #F9F9F9;
+    color: #0067C0;
+    border-radius: 6px;
     font-weight: 700;
-    border: 1px solid #EDEDED;
+    font-size: 12pt;
+    border: 1px solid #EBEBEB;
 }
 
 #DriveTitle {
     font-weight: 600;
-    font-size: 10pt;
+    font-size: 10.5pt;
     color: #1A1A1A;
 }
 
@@ -42,65 +43,78 @@ QMainWindow {
     color: #616161;
 }
 
-/* Primary Windows Buttons */
-QPushButton#PrimaryButton {
+/* Primary Windows Buttons (Blue) */
+QPushButton#PrimaryBtn, QPushButton#MountBtn {
     background-color: #0067C0;
     color: #FFFFFF;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 600;
     border: none;
-    padding: 6px 16px;
+    padding: 6px 14px;
 }
 
-QPushButton#PrimaryButton:hover {
-    background-color: #1975C5;
+QPushButton#PrimaryBtn:hover, QPushButton#MountBtn:hover {
+    background-color: #005AAB;
 }
 
-/* Mount Action Button */
-QPushButton#MountButton {
-    background-color: #0067C0;
-    color: white;
-    border-radius: 4px;
-    font-weight: 600;
-    border: none;
+QPushButton#PrimaryBtn:pressed, QPushButton#MountBtn:pressed {
+    background-color: #004D91;
 }
 
-QPushButton#MountButton[isUnmount="true"] {
+/* Action Styles via Property */
+QPushButton#MountBtn[isUnmount="true"] {
     background-color: #C42B1C;
 }
 
-QPushButton#MountButton:hover {
-    opacity: 0.9;
+QPushButton#MountBtn[isUnmount="true"]:hover {
+    background-color: #A82318;
 }
 
-/* Grey Secondary Buttons */
-QPushButton#SecondaryButton {
-    background-color: #FFFFFF;
+/* Secondary Buttons (Grey/Outline Style) */
+QPushButton#SecondaryBtn {
+    background-color: #E5E5E5;
     color: #1A1A1A;
     border: 1px solid #CCCCCC;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 600;
 }
 
-QPushButton#SecondaryButton:hover {
-    background-color: #EEEEEE;
+QPushButton#SecondaryBtn:hover {
+    background-color: #D5D5D5;
+}
+
+QPushButton#SecondaryBtn:pressed {
+    background-color: #C5C5C5;
 }
 
 /* System Logs */
-#SystemLog {
+#ActivityLog {
     background-color: #FFFFFF;
-    border: 1px solid #E0E0E0;
-    border-radius: 6px;
-    font-family: 'Consolas', monospace;
-    font-size: 8pt;
-    color: #616161;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.5pt;
+    color: #444444;
+    padding: 5px;
 }
 
 QLineEdit, QComboBox {
     background-color: #FFFFFF;
     border: 1px solid #CCCCCC;
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 4px;
 }
 
 QScrollArea { border: none; background: transparent; }
+QScrollBar:vertical {
+    border: none;
+    background: transparent;
+    width: 8px;
+}
+QScrollBar::handle:vertical {
+    background: #CCCCCC;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #AAAAAA;
+}
