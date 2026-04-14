@@ -1,33 +1,88 @@
-/* Windows 11 Native Polish Dark Theme */
+/* 
+   L-Drive Pro: Fluent Design System (Windows 11)
+   Dark Theme - Premium Mockup Style
+*/
+
 QWidget {
-    background-color: #202020;
-    color: #F8FAFC;
+    background-color: #202020; /* Deep Dark Mica */
+    color: #F0F0FB;
     font-family: 'Segoe UI Variable Text', sans-serif;
+    font-size: 10pt;
 }
 
-QMainWindow { background-color: #202020; }
+QMainWindow {
+    background-color: #202020;
+}
 
-#AppTitle { font-size: 15pt; font-weight: 800; color: #FFFFFF; }
+#AppLogo {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #FFFFFF;
+}
 
+#PrimaryAddBtn {
+    background-color: #0078D4; /* Fluent Blue */
+    color: #FFFFFF;
+    border-radius: 6px;
+}
+#PrimaryAddBtn:hover { background-color: #1A86D9; }
+
+#HeaderIconBtn {
+    background-color: transparent;
+    color: #BBBBBB;
+    border-radius: 4px;
+}
+#HeaderIconBtn:hover { background-color: #333333; color: #FFFFFF; }
+
+/* Cards */
 #DriveCard {
-    background-color: #2B2B2B;
-    border: 1px solid #333333;
+    background-color: #2D2D2D;
+    border: 1px solid #3A3A3A;
+    border-radius: 12px;
+}
+#DriveCard:hover {
+    border-color: #0078D4;
+    background-color: #333333;
+}
+
+#DriveLetterBadge {
+    background-color: #1A1A1A;
+    color: #60CDFF; /* Soft Dark Blue */
     border-radius: 8px;
 }
 
-#IconBadge {
-    background-color: #202020;
-    color: #60CDFF;
-    border-radius: 20px;
-    font-weight: 800;
+/* Status dots */
+#StatusDot_Connected { background-color: #32D74B; border-radius: 4px; }
+#StatusDot_Disconnected { background-color: #FF453A; border-radius: 4px; }
+#StatusLabel { color: #AEAEB2; }
+
+#CardActionBtn {
+    background-color: #3A3A3A;
+    color: #FFFFFF;
+    border: 1px solid #48484A;
+}
+#CardActionBtn:hover { background-color: #48484A; }
+
+#CardAccentBtn {
+    background-color: #0078D4;
+    color: #FFFFFF;
+}
+#CardAccentBtn[isUnmount="true"] { background-color: #FF453A; }
+
+#ActivityContainer {
+    background-color: #2D2D2D;
+    border-top: 1px solid #3A3A3A;
 }
 
-QPushButton#MountButton { background-color: #0067C0 !important; color: #FFFFFF !important; }
-QPushButton#UnmountButton { background-color: #C42B1C !important; color: #FFFFFF !important; }
-QPushButton#SubButton { background-color: #333333 !important; color: #FFFFFF !important; }
-
-#ActivityMonitor {
-    background-color: #1A1A1A;
-    border: 1px solid #333333;
+#ActivityLog {
+    background-color: #2D2D2D;
     color: #BBBBBB;
+}
+
+#EmptyStateTitle { color: #FFFFFF; }
+
+QLineEdit, QComboBox {
+    background-color: #2D2D2D;
+    border: 1px solid #3A3A3A;
+    color: #FFFFFF;
 }

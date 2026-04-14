@@ -84,7 +84,12 @@ class LDriveApp:
 
     def _setup_dashboards(self):
         self.window.clear_cards()
-        for profile in self.config.get_profiles():
+        profiles = self.config.get_profiles()
+        if not profiles:
+            self.window.show_empty_state()
+            return
+            
+        for profile in profiles:
             card = DriveCardWidget(profile)
             card.toggle_requested.connect(self.handle_toggle_mount)
             card.edit_requested.connect(self.handle_edit_drive)
