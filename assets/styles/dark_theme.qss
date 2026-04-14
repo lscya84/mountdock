@@ -101,6 +101,45 @@ QScrollBar::handle:vertical {
     border-radius: 5px;
 }
 
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    height: 0px;
+/* DriveCardWidget Styles */
+#DriveCard {
+    background-color: #252525;
+    border: 1px solid #3d3d3d;
+    border-radius: 10px;
+    margin: 5px;
+}
+
+#DriveCard:hover {
+    border: 1px solid #4a9eff;
+}
+
+#DriveCardTitle {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+#DriveCardLetter {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #4a9eff;
+}
+
+#StatusDisconnected { color: #ff9800; font-weight: bold; }
+#StatusConnected { color: #4caf50; font-weight: bold; }
+#StatusReconnecting { color: #ffc107; font-weight: bold; }
+
+/* Dialog Styles */
+QDialog {
+    background-color: #1e1e1e;
+}
+
+#IconButton {
+    background-color: transparent;
+    padding: 5px;
+}
+
+#IconButton:hover {
+    background-color: #3d3d3d;
+    border-radius: 4px;
 }

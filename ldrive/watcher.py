@@ -2,7 +2,7 @@ import time
 import socket
 import os
 import logging
-from PySide6.QtCore import QThread, Signal as pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal
 from ldrive.rclone_engine import RcloneEngine
 
 logger = logging.getLogger("Watcher")
@@ -17,12 +17,14 @@ class LDriveWatcher(QThread):
     status_changed = pyqtSignal(str)     # 상태 메시지 (예: "Connected", "Reconnecting...")
     log_emitted = pyqtSignal(str)        # 로그 메시지 (UI 로그 뷰어용)
 
-    def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str):
+    def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, root_folder: str = "/", custom_args: str = ""):
         super().__init__()
         self.engine = engine
         self.remote = remote
         self.drive_letter = drive_letter
         self.vfs_mode = vfs_mode
+        self.root_folder = root_folder
+        self.custom_args = custom_args
         
         self.is_running = True
         self.check_interval = 5  # 정상 상태일 때 체크 주기 (초)
@@ -83,7 +85,13 @@ class LDriveWatcher(QThread):
             self.log_emitted.emit(f"[Watcher] {self.remote} 마운트 재시도 중... (대기: {backoff}초)")
             
             # 마운트 시도
-            success = self.engine.mount(self.remote, self.drive_letter, self.vfs_mode)
+            success = self.engine.mount(
+                self.remote, 
+                self.drive_letter, 
+                self.vfs_mode, 
+                self.root_folder, 
+                self.custom_args
+            )
             
             if success:
                 # 마운트 명령어 실행 직후 바로 접근 가능한 것은 아니므로 잠시 대기

@@ -61,7 +61,7 @@ class RcloneEngine:
             logger.error(f"리모트 목록 로드 실패: {e}")
             return []
 
-    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full") -> bool:
+    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "") -> bool:
         """
         지정된 리모트를 특정 드라이브 문자로 마운트합니다.
         
@@ -69,6 +69,8 @@ class RcloneEngine:
             remote (str): 마운트할 리모트 이름
             drive_letter (str): 할당할 드라이브 문자 (예: 'Z')
             vfs_mode (str): VFS 캐시 모드 ('full', 'writes' 등)
+            root_folder (str): 리모트 내의 시작 경로 (기본값 '/')
+            custom_args (str): 사용자가 직접 입력한 추가 인자들
             
         Returns:
             bool: 성공 여부
@@ -80,14 +82,26 @@ class RcloneEngine:
         # 드라이브 문자 형식 정리 (Z -> Z:)
         drive_path = f"{drive_letter.upper()}:"
         
-        # 명령어 조립
+        # 기본 명령어 조립
+        # remote:root_folder 형식 (root가 /이면 생략 가능하지만 명시적으로 처리)
+        remote_path = f"{remote}:{root_folder}"
+        
         cmd = [
             self.rclone_path, "mount",
-            f"{remote}:", drive_path,
+            remote_path, drive_path,
             "--vfs-cache-mode", vfs_mode,
             "--volname", f"L-Drive ({remote})",
-            "--no-console" # rclone 자체 옵션 (필요시)
+            "--no-console"
         ]
+
+        # 커스텀 인자 추가 (공백으로 분리)
+        if custom_args:
+            import shlex
+            try:
+                extra_args = shlex.split(custom_args)
+                cmd.extend(extra_args)
+            except Exception as e:
+                logger.error(f"커스텀 인자 파싱 오류: {e}")
 
         logger.info(f"마운트 시도: {' '.join(cmd)}")
 
