@@ -1,4 +1,4 @@
-/* Windows 11 Modern Dark Theme */
+/* Fluent Design Dark Theme - Windows 11 Style */
 QWidget {
     background-color: #202020;
     color: #FFFFFF;
@@ -10,23 +10,24 @@ QMainWindow {
     background-color: #202020;
 }
 
-#AppLogo {
+#AppTitleHeader {
     font-size: 14pt;
     font-weight: 700;
 }
 
-/* Card Row */
 #DriveCard {
     background-color: #2B2B2B;
     border: 1px solid #333333;
+    border-bottom: 2px solid #1A1A1A;
     border-radius: 8px;
 }
 
-#LetterIcon {
+#LetterBox {
     background-color: #202020;
     color: #60CDFF;
-    border-radius: 6px;
+    border-radius: 4px;
     font-weight: 700;
+    font-size: 12pt;
     border: 1px solid #333333;
 }
 
@@ -34,32 +35,29 @@ QMainWindow {
 #StatusLabel { color: #BBBBBB; }
 
 /* Buttons */
-QPushButton#PrimaryBtn, QPushButton#MountBtn {
+QPushButton#AccentButton {
     background-color: #60CDFF; /* Win11 Dark Accent */
     color: #000000;
     border-radius: 6px;
-    font-weight: 600;
-    border: none;
+    font-weight: 700;
 }
 
-QPushButton#PrimaryBtn:hover, QPushButton#MountBtn:hover { background-color: #4CB9EA; }
+QPushButton#AccentButton:hover { background-color: #4CB9EA; }
 
-QPushButton#MountBtn[isUnmount="true"] {
-    background-color: #FF99A4;
+QPushButton#AccentButton[isUnmount="true"] {
+    background-color: #FF99A4; /* Dark State Red */
     color: #000000;
 }
 
-QPushButton#SecondaryBtn {
+QPushButton#SubButton {
     background-color: #333333;
     color: #FFFFFF;
-    border: 1px solid #444444;
     border-radius: 6px;
 }
 
-QPushButton#SecondaryBtn:hover { background-color: #3E3E3E; }
+QPushButton#SubButton:hover { background-color: #3E3E3E; }
 
-/* Activity Logs */
-#ActivityLog {
+#ActivityLogDisplay {
     background-color: #1A1A1A;
     border: 1px solid #333333;
     color: #BBBBBB;
