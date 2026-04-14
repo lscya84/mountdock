@@ -2,7 +2,7 @@ import time
 import socket
 import os
 import logging
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal as pyqtSignal
 from ldrive.rclone_engine import RcloneEngine
 
 logger = logging.getLogger("Watcher")

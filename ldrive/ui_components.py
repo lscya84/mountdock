@@ -1,12 +1,12 @@
 import os
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QComboBox, QPushButton, QRadioButton, 
     QCheckBox, QGroupBox, QPlainTextEdit, QFormLayout,
     QSystemTrayIcon, QMenu
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QAction
+from PySide6.QtCore import Qt, Signal as pyqtSignal
+from PySide6.QtGui import QIcon, QAction
 
 class LDriveTrayIcon(QSystemTrayIcon):
     """
@@ -64,7 +64,7 @@ class LDriveMainWindow(QMainWindow):
 
         # 1. 상단 제목
         title_label = QLabel("L-Drive (Live-Drive) Pro")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("font-size: 18pt; font-weight: bold; color: #4a9eff; margin-bottom: 10px;")
         main_layout.addWidget(title_label)
 
@@ -103,11 +103,11 @@ class LDriveMainWindow(QMainWindow):
         btn_layout = QHBoxLayout()
         self.mount_btn = QPushButton("Mount")
         self.mount_btn.setObjectName("MountButton")
-        self.mount_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.mount_btn.setCursor(Qt.PointingHandCursor)
         
         self.unmount_btn = QPushButton("Unmount")
         self.unmount_btn.setObjectName("UnmountButton")
-        self.unmount_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.unmount_btn.setCursor(Qt.PointingHandCursor)
         
         btn_layout.addWidget(self.mount_btn)
         btn_layout.addWidget(self.unmount_btn)
