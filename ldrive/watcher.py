@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import os
 
@@ -7,6 +8,9 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from ldrive.rclone_engine import RcloneEngine
 
 logger = logging.getLogger("Watcher")
+
+DRIVE_UNKNOWN = 0
+DRIVE_NO_ROOT_DIR = 1
 
 
 class LDriveWatcher(QThread):
@@ -38,7 +42,7 @@ class LDriveWatcher(QThread):
         logger.info("Watcher Starting: %s", self.remote)
         self.status_changed.emit("Starting")
 
-        if not self._strict_wait_for_mount(timeout=15):
+        if not self._strict_wait_for_mount(timeout=45):
             self.status_changed.emit("Disconnected")
             return
 
@@ -50,7 +54,7 @@ class LDriveWatcher(QThread):
                 self.log_emitted.emit(f"[Watcher] Drive {self.drive_letter}: connection lost. Retrying.")
                 self._handle_reconnect()
 
-    def _strict_wait_for_mount(self, timeout: int = 15) -> bool:
+    def _strict_wait_for_mount(self, timeout: int = 45) -> bool:
         for attempt in range(timeout):
             if not self.is_running:
                 return False
@@ -62,30 +66,33 @@ class LDriveWatcher(QThread):
                 return False
 
             if self._check_drive_ready():
-                self.log_emitted.emit(f"[Success] Drive {self.drive_letter}: mounted and accessible.")
+                self.log_emitted.emit(f"[Success] Drive {self.drive_letter}: mounted.")
                 self.status_changed.emit("Connected")
                 return True
 
-            self.status_changed.emit(f"Mounting {attempt + 1}/{timeout}")
+            self.status_changed.emit("Mounting")
             self.msleep(1000)
 
-        self.log_emitted.emit(f"[Timeout] Drive {self.drive_letter}: mount point did not become accessible.")
+        self.log_emitted.emit(
+            f"[Timeout] Drive {self.drive_letter}: mount point did not become accessible. "
+            f"drive_type={self._get_drive_type()} exists={self._check_drive_exists()}"
+        )
         return False
 
     def _check_connection(self) -> bool:
         return self.engine.is_process_alive(self.drive_letter) and self._check_drive_ready()
 
     def _check_drive_ready(self) -> bool:
-        if not self._check_drive_exists():
-            return False
+        drive_type = self._get_drive_type()
+        if drive_type not in (DRIVE_UNKNOWN, DRIVE_NO_ROOT_DIR):
+            return True
 
-        try:
-            os.listdir(self.drive_path)
-            return True
-        except PermissionError:
-            return True
-        except OSError:
-            return False
+        if self._check_drive_exists():
+            try:
+                return os.path.isdir(self.drive_path)
+            except OSError:
+                return False
+        return False
 
     def _check_drive_exists(self) -> bool:
         if os.path.exists(self.drive_path):
@@ -98,12 +105,18 @@ class LDriveWatcher(QThread):
             pass
         return False
 
+    def _get_drive_type(self) -> int:
+        try:
+            return ctypes.windll.kernel32.GetDriveTypeW(self.drive_path)
+        except Exception:
+            return DRIVE_UNKNOWN
+
     def _handle_reconnect(self):
         backoff = 2
         self.engine.unmount(self.drive_letter)
 
         while self.is_running:
-            self.status_changed.emit(f"Retrying in {backoff}s")
+            self.status_changed.emit("Retry")
             process = self.engine.mount(
                 self.remote,
                 self.drive_letter,
@@ -113,7 +126,7 @@ class LDriveWatcher(QThread):
                 self.volname,
             )
 
-            if process and self._strict_wait_for_mount(timeout=15):
+            if process and self._strict_wait_for_mount(timeout=45):
                 return
 
             self.msleep(backoff * 1000)
