@@ -51,7 +51,6 @@ class LDriveApp:
         # 6. 실행 모드 (트레이 모드 시작 여부)
         if self.config.get("start_minimized"):
             self.window.hide()
-            self.tray.showMessage("L-Drive Pro", "앱이 트레이 모드로 시작되었습니다.", QSystemTrayIcon.MessageIcon.Information, 1500)
         else:
             self.window.show()
 
@@ -87,10 +86,9 @@ class LDriveApp:
         self.window.activateWindow()
 
     def _on_close_event(self, event):
-        if self.window.isVisible():
-            self.window.hide()
-            self.tray.showMessage("L-Drive Pro", "대시보드가 트레이로 숨겨졌습니다.", QSystemTrayIcon.MessageIcon.Information, 1500)
-            event.ignore()
+        """X 버튼 클릭 시 트레이로 숨기지 않고 앱을 완전히 종료합니다."""
+        self.exit_app()
+        event.accept()
 
     def handle_settings(self):
         """전역 설정 다이얼로그 실행"""

@@ -40,6 +40,9 @@ class LDriveWatcher(QThread):
         logger.info(f"Watcher 스레드 시작: {self.remote} -> {self.drive_path}")
         self.log_emitted.emit(f"[Watcher] 감시 시작: {self.remote} -> {self.drive_path}")
         
+        # Rclone이 드라이브를 완전히 띄울 시간을 줍니다.
+        self.msleep(4000)
+        
         while self.is_running:
             if self._check_connection():
                 # 연결 상태가 양호하면 대기
@@ -48,7 +51,7 @@ class LDriveWatcher(QThread):
             else:
                 # 연결이 끊겼거나 드라이브에 접근 불가한 경우 재연결 시도
                 self.status_changed.emit("Disconnected")
-                self.log_emitted.emit(f"[Watcher] 연결 끊김 감지! 재연결을 시도합니다.")
+                self.log_emitted.emit(f"[Watcher] {self.remote} 연결 끊김 감지! 재연결을 시도합니다.")
                 self._handle_reconnect()
     
     def _check_connection(self) -> bool:
@@ -96,18 +99,20 @@ class LDriveWatcher(QThread):
             )
             
             if success:
-                # 마운트 명령어 실행 직후 바로 접근 가능한 것은 아니므로 잠시 대기
-                self.msleep(2000)
+                # Rclone이 OS에 드라이브를 등록할 충분한 시간을 줍니다.
+                self.msleep(4000)
                 if os.path.exists(self.drive_path):
                     self.log_emitted.emit(f"[Watcher] {self.remote} 재연결 성공!")
                     self.status_changed.emit("Connected")
                     break
+                else:
+                    self.log_emitted.emit(f"[Watcher] {self.remote} 마운트 성공했으나 드라이브가 보이지 않습니다. 정리 후 재시도합니다.")
+                    self.engine.unmount(self.drive_letter)
             
             # 실패 시 지수 백오프 적용
             self.msleep(backoff * 1000)
             backoff = min(backoff * 2, self.max_backoff)
             
-            # 네트워크가 여전히 끊겨 있다면 백오프 진행 전에 네트워크 확인 루프를 돌 수도 있음
             if not self._is_network_available():
                 self.log_emitted.emit("[Watcher] 네트워크 연결이 없습니다. 대기 중...")
 

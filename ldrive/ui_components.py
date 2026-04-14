@@ -253,11 +253,14 @@ class LDriveMainWindow(QMainWindow):
     settings_requested = pyqtSignal()
     theme_toggle_requested = pyqtSignal() # 테마 토글 시그널 추가
 
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("L-Drive Pro - Dashboard")
-        self.setFixedSize(600, 750)
-        self._init_ui()
+    def changeEvent(self, event):
+        """창 상태 변경 이벤트: 최소화 시 트레이로 숨깁니다."""
+        from PyQt6.QtCore import QEvent
+        if event.type() == QEvent.Type.WindowStateChange:
+            if self.isMinimized():
+                self.hide()
+                event.ignore()
+        super().changeEvent(event)
 
     def _init_ui(self):
         central = QWidget()
