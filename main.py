@@ -64,6 +64,7 @@ class LDriveApp:
         theme = "dark" if self.config.get("theme") == "light" else "light"
         self.config.set("theme", theme)
         self.window._apply_styles(theme)
+        self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), theme)
 
     def _show_window(self):
         self.window.show()
@@ -81,12 +82,15 @@ class LDriveApp:
                 else: self.config.set(k, v)
             self.engine.set_paths(data["rclone_path"], data["rclone_conf_path"])
             self.window.append_log("Settings saved.")
+            self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), self.config.get("theme", "light"))
 
     def _setup_dashboards(self):
         self.window.clear_cards()
         profiles = self.config.get_profiles()
+        active_count = len(self.watchers)
         if not profiles:
             self.window.show_empty_state()
+            self.window.update_overview(0, active_count, self.config.get("theme", "light"))
             return
             
         for profile in profiles:
@@ -98,6 +102,7 @@ class LDriveApp:
             if profile["id"] in self.watchers:
                 card.set_status("Connected")
             self.window.add_card(card)
+        self.window.update_overview(len(profiles), active_count, self.config.get("theme", "light"))
 
     def handle_add_drive(self):
         dialog = DriveSettingsDialog(self.engine.get_remotes(), self.window)
@@ -138,6 +143,7 @@ class LDriveApp:
                 watcher.log_emitted.connect(self.window.append_log)
                 watcher.start()
                 self.watchers[pid] = watcher
+                self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), self.config.get("theme", "light"))
             else:
                 self.window.append_log(f"Mount Error: {self.engine.last_error}")
                 QMessageBox.critical(self.window, "Mount Failed", f"Rclone Error:\n\n{self.engine.last_error}")
@@ -146,6 +152,7 @@ class LDriveApp:
                 self.watchers[pid].stop(); del self.watchers[pid]
             self.engine.unmount(profile["letter"])
             card.set_status("Disconnected")
+            self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), self.config.get("theme", "light"))
 
     def _find_card(self, pid):
         for i in range(self.window.card_layout.count()):
