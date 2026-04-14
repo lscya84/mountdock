@@ -4,9 +4,8 @@ import string
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QComboBox, QPushButton, QCheckBox, 
-    QGroupBox, QPlainTextEdit, QFormLayout,
-    QSystemTrayIcon, QMenu, QScrollArea, QDialog, QLineEdit,
-    QFrame, QSpacerItem, QSizePolicy
+    QScrollArea, QDialog, QLineEdit, QFrame, 
+    QPlainTextEdit, QFormLayout, QSystemTrayIcon, QMenu
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QEvent
 from PyQt6.QtGui import QIcon, QAction, QFont, QCursor
@@ -16,14 +15,14 @@ class DriveSettingsDialog(QDialog):
         super().__init__(parent)
         self.profile = profile or {}
         self.remotes = remotes
-        self.setWindowTitle("Config Drive" if profile else "New Drive")
+        self.setWindowTitle("Drive Config")
         self.setFixedWidth(360)
         self._init_ui()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
-        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setContentsMargins(20, 20, 20, 20)
         
         form = QFormLayout()
         self.remote_combo = QComboBox()
@@ -36,32 +35,24 @@ class DriveSettingsDialog(QDialog):
         if "letter" in self.profile: self.letter_combo.setCurrentText(f"{self.profile['letter']}:")
         
         self.vol_edit = QLineEdit(self.profile.get("volname", ""))
-        self.vol_edit.setPlaceholderText("Drive Name in Explorer")
-
         self.root_edit = QLineEdit(self.profile.get("root_folder", "/"))
         self.vfs_combo = QComboBox()
         self.vfs_combo.addItems(["full", "writes", "off", "minimal"])
-        if "vfs_mode" in self.profile: self.vfs_combo.setCurrentText(self.profile["vfs_mode"])
         
-        form.addRow("Remote Target:", self.remote_combo)
-        form.addRow("Drive Letter:", self.letter_combo)
-        form.addRow("Volume Label:", self.vol_edit)
-        form.addRow("Root Folder:", self.root_edit)
-        form.addRow("VFS Mode:", self.vfs_combo)
+        form.addRow("Remote:", self.remote_combo)
+        form.addRow("Letter:", self.letter_combo)
+        form.addRow("Label:", self.vol_edit)
+        form.addRow("Folder:", self.root_edit)
+        form.addRow("VFS:", self.vfs_combo)
         layout.addLayout(form)
         
         btns = QHBoxLayout()
         btns.addStretch()
-        sv = QPushButton("Save Connection")
+        sv = QPushButton("Save")
         sv.setObjectName("ConnectBtn")
         sv.setCursor(Qt.CursorShape.PointingHandCursor)
-        cl = QPushButton("Cancel")
-        cl.setObjectName("SubBtn")
-        cl.setCursor(Qt.CursorShape.PointingHandCursor)
-        
         sv.clicked.connect(self.accept)
-        cl.clicked.connect(self.reject)
-        btns.addWidget(cl); btns.addWidget(sv)
+        btns.addWidget(sv)
         layout.addLayout(btns)
 
     def get_data(self):
@@ -84,56 +75,54 @@ class DriveCardWidget(QFrame):
         self.profile = profile
         self.is_running = False
         self.setObjectName("DriveCard")
-        self.setFixedHeight(105)
+        self.setFixedHeight(85)
         self._init_ui()
 
     def _init_ui(self):
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(20, 12, 20, 12)
+        layout.setContentsMargins(15, 10, 15, 10)
         layout.setSpacing(15)
 
-        # Drive Letter Icon/Badge
+        # Drive Letter Badge
         self.badge = QLabel(self.profile['letter'])
-        self.badge.setObjectName("LetterBadge")
-        self.badge.setFixedSize(48, 48)
+        self.badge.setObjectName("DriveLetter")
+        self.badge.setFixedSize(40, 40)
         self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.badge)
 
-        # Information Area
+        # Text Area
         info_layout = QVBoxLayout()
-        info_layout.setSpacing(1)
+        info_layout.setSpacing(0)
         info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         
         name_val = self.profile.get('volname') or self.profile['remote']
-        self.title_label = QLabel(name_val)
-        self.title_label.setObjectName("CardTitle")
-        
+        self.name_label = QLabel(name_val)
         self.status_label = QLabel("Disconnected")
-        self.status_label.setObjectName("CardStatus")
+        self.status_label.setStyleSheet("color: #888888; font-size: 12px;")
         
-        info_layout.addWidget(self.title_label)
+        info_layout.addWidget(self.name_label)
         info_layout.addWidget(self.status_label)
         layout.addLayout(info_layout)
         
         layout.addStretch()
 
-        # Connect / Disconnect Action (Hard-coded IDs for QSS)
+        # Action Buttons
         self.toggle_btn = QPushButton("Connect")
         self.toggle_btn.setObjectName("ConnectBtn")
-        self.toggle_btn.setFixedSize(100, 36)
+        self.toggle_btn.setFixedSize(110, 36)
         self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.toggle_btn.clicked.connect(self._on_toggle)
         layout.addWidget(self.toggle_btn)
 
-        self.edit_btn = QPushButton("Config")
+        self.edit_btn = QPushButton("Edit")
         self.edit_btn.setObjectName("SubBtn")
-        self.edit_btn.setFixedSize(65, 36)
+        self.edit_btn.setFixedSize(60, 36)
         self.edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
         
-        self.delete_btn = QPushButton("Remove")
+        self.delete_btn = QPushButton("Del")
         self.delete_btn.setObjectName("SubBtn")
-        self.delete_btn.setFixedSize(70, 36)
+        self.delete_btn.setFixedSize(50, 36)
         self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
 
@@ -147,14 +136,13 @@ class DriveCardWidget(QFrame):
         self.status_label.setText(status)
         if status == "Connected":
             self.toggle_btn.setText("Disconnect")
-            self.toggle_btn.setObjectName("DisconnectBtn") # Red
+            self.toggle_btn.setObjectName("DisconnectBtn")
             self.is_running = True
         else:
             self.toggle_btn.setText("Connect")
-            self.toggle_btn.setObjectName("ConnectBtn") # Blue
+            self.toggle_btn.setObjectName("ConnectBtn")
             self.is_running = False
         
-        # Fresh style update
         self.toggle_btn.style().unpolish(self.toggle_btn)
         self.toggle_btn.style().polish(self.toggle_btn)
 
@@ -166,75 +154,45 @@ class LDriveMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("L-Drive Pro")
-        self.setFixedSize(450, 620)
+        self.setFixedSize(420, 550) # Hardcoded size
         self._init_ui()
-
-    def changeEvent(self, event):
-        if event.type() == QEvent.Type.WindowStateChange and self.isMinimized():
-            self.hide()
-            event.ignore()
-        super().changeEvent(event)
 
     def _init_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(10)
         
-        # Header area
         header = QHBoxLayout()
-        header.setContentsMargins(0, 0, 0, 5)
-        self.app_title = QLabel("L-Drive Pro")
-        self.app_title.setObjectName("AppTitleHeader")
-        header.addWidget(self.app_title)
+        header.addWidget(QLabel("L-Drive Pro Settings"))
         header.addStretch()
         
-        self.theme_btn = QPushButton("Theme")
-        self.theme_btn.setObjectName("SubBtn")
-        self.theme_btn.setFixedSize(70, 32)
-        self.theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        add_btn = QPushButton("+ Add")
+        add_btn.setObjectName("ConnectBtn")
+        add_btn.setFixedSize(70, 30)
+        add_btn.clicked.connect(self.add_requested.emit)
         
-        self.settings_btn = QPushButton("Options")
-        self.settings_btn.setObjectName("SubBtn")
-        self.settings_btn.setFixedSize(75, 32)
-        self.settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        self.add_btn = QPushButton("+ Add")
-        self.add_btn.setObjectName("ConnectBtn")
-        self.add_btn.setFixedSize(75, 32)
-        self.add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        
-        self.theme_btn.clicked.connect(self.theme_toggle_requested.emit)
-        self.settings_btn.clicked.connect(self.settings_requested.emit)
-        self.add_btn.clicked.connect(self.add_requested.emit)
-        
-        header.addWidget(self.theme_btn)
-        header.addWidget(self.settings_btn)
-        header.addWidget(self.add_btn)
+        header.addWidget(add_btn)
         main_layout.addLayout(header)
 
-        # Card Content Area
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll.setStyleSheet("background: transparent; border: none;")
         
         self.container = QWidget()
-        self.container.setStyleSheet("background: transparent;")
         self.card_layout = QVBoxLayout(self.container)
         self.card_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.card_layout.setSpacing(12)
+        self.card_layout.setSpacing(8)
         self.card_layout.setContentsMargins(0, 0, 0, 0)
         
         self.scroll.setWidget(self.container)
         main_layout.addWidget(self.scroll)
 
-        # Log Screen
         self.log_viewer = QPlainTextEdit()
         self.log_viewer.setReadOnly(True)
-        self.log_viewer.setFixedHeight(120)
-        self.log_viewer.setObjectName("ActivityMonitor")
+        self.log_viewer.setFixedHeight(100)
+        self.log_viewer.setStyleSheet("background-color: #FFFFFF; border: 1px solid #E5E5E5; border-radius: 4px;")
         main_layout.addWidget(self.log_viewer)
 
     def clear_cards(self):
@@ -260,55 +218,8 @@ class LDriveMainWindow(QMainWindow):
     def append_log(self, message: str):
         import datetime
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        if "[Error]" in message or "실패" in message:
-            self.log_viewer.appendHtml(f'<span style="color: #C42B1C; font-weight: bold;">[{timestamp}] {message}</span>')
-        else:
-            self.log_viewer.appendPlainText(f"[{timestamp}] {message}")
+        self.log_viewer.appendPlainText(f"[{timestamp}] {message}")
         self.log_viewer.verticalScrollBar().setValue(self.log_viewer.verticalScrollBar().maximum())
-
-class GlobalSettingsDialog(QDialog):
-    def __init__(self, config_dict, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("System Preferences")
-        self.setFixedWidth(360)
-        self.config_dict = config_dict
-        self._init_ui()
-
-    def _init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(12)
-        layout.setContentsMargins(25, 25, 25, 25)
-        
-        form = QFormLayout()
-        self.rclone_edit = QLineEdit(self.config_dict.get("rclone_path", "rclone.exe"))
-        self.conf_edit = QLineEdit(self.config_dict.get("rclone_conf_path", ""))
-        self.auto_start = QCheckBox("Automatically start with Windows")
-        self.auto_start.setChecked(self.config_dict.get("auto_start", False))
-        self.minimized = QCheckBox("Start hidden in System Tray")
-        self.minimized.setChecked(self.config_dict.get("start_minimized", False))
-        
-        form.addRow("Rclone Path:", self.rclone_edit)
-        form.addRow("Config Path:", self.conf_edit)
-        layout.addLayout(form)
-        layout.addWidget(self.auto_start)
-        layout.addWidget(self.minimized)
-        
-        btns = QHBoxLayout()
-        sv = QPushButton("Apply Options")
-        sv.setObjectName("ConnectBtn")
-        sv.setCursor(Qt.CursorShape.PointingHandCursor)
-        sv.clicked.connect(self.accept)
-        btns.addStretch()
-        btns.addWidget(sv)
-        layout.addLayout(btns)
-
-    def get_data(self):
-        return {
-            "rclone_path": self.rclone_edit.text(),
-            "rclone_conf_path": self.conf_edit.text(),
-            "auto_start": self.auto_start.isChecked(),
-            "start_minimized": self.minimized.isChecked()
-        }
 
 class LDriveTrayIcon(QSystemTrayIcon):
     show_requested = pyqtSignal()
@@ -317,7 +228,7 @@ class LDriveTrayIcon(QSystemTrayIcon):
     def __init__(self, icon, parent=None):
         super().__init__(icon, parent)
         menu = QMenu()
-        show = QAction("Restore Dashboard", self); show.triggered.connect(self.show_requested.emit)
-        ex = QAction("Shut Down", self); ex.triggered.connect(self.exit_requested.emit)
+        show = QAction("Open", self); show.triggered.connect(self.show_requested.emit)
+        ex = QAction("Exit", self); ex.triggered.connect(self.exit_requested.emit)
         menu.addAction(show); menu.addSeparator(); menu.addAction(ex)
         self.setContextMenu(menu)
