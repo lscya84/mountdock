@@ -134,7 +134,8 @@ class LDriveApp:
                 watcher.start()
                 self.watchers[pid] = watcher
             else:
-                QMessageBox.critical(self.window, "Error", "Mount failed.")
+                self.window.append_log(f"Mount Error: {self.engine.last_error}")
+                QMessageBox.critical(self.window, "Mount Failed", f"Rclone Error:\n\n{self.engine.last_error}")
         else:
             if pid in self.watchers:
                 self.watchers[pid].stop(); del self.watchers[pid]

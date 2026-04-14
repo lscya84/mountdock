@@ -1,83 +1,115 @@
-/* High-Density Text-Based Light Theme */
+/* Designer SaaS Light Theme - iOS/Toss Style */
 QWidget {
-    background-color: #f8f9fa;
-    color: #212529;
-    font-family: 'Segoe UI Variable Display', -apple-system, sans-serif;
+    background-color: #F0F2F5; /* Global Background */
+    color: #1D1D1F; /* Deep Black Text */
+    font-family: 'Segoe UI Variable Text', -apple-system, system-ui, sans-serif;
     font-size: 10pt;
 }
 
-QMainWindow { background-color: #f8f9fa; }
+QMainWindow {
+    background-color: #F0F2F5;
+}
 
-#AppLogo { font-size: 14pt; font-weight: 800; color: #3182f6; }
+#AppLogo {
+    font-size: 15pt;
+    font-weight: 800;
+    color: #007AFF; /* iOS Blue */
+    letter-spacing: -0.5px;
+}
 
-/* Main Action Buttons (Mount, Save, Add) */
-QPushButton[class="actionBtn"] {
-    background-color: #3182f6;
-    color: #ffffff;
-    border-radius: 6px;
+/* Card Style */
+#DriveCard {
+    background-color: #FFFFFF;
+    border: 1px solid #D1D1D6;
+    border-radius: 14px;
+    /* Subtle Shadow hint can be added here if needed */
+}
+
+/* Round Circle Icon */
+#LetterCircle {
+    background-color: #EBF5FF;
+    color: #007AFF;
+    border-radius: 22px;
     font-weight: 700;
+    font-size: 13pt;
+    border: 1px solid #C7E0FF;
+}
+
+/* Main Text Hierarchies */
+#DriveTitle {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #1D1D1F;
+}
+
+#StatusDisconnected { color: #FF9500; font-weight: 600; font-size: 8pt; }
+#StatusConnected { color: #34C759; font-weight: 600; font-size: 8pt; }
+
+/* Buttons Style */
+QPushButton {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 6px 14px;
     border: none;
 }
 
-QPushButton[class="actionBtn"]:hover { background-color: #1b64da; }
-
-/* Special State: Unmount (Red) */
-QPushButton[class="actionBtn"][isUnmount="true"] {
-    background-color: #e53e3e;
+/* Primary Action Colors */
+QPushButton#MountButton {
+    background-color: #007AFF;
+    color: white;
 }
 
-QPushButton[class="actionBtn"][isUnmount="true"]:hover {
-    background-color: #c53030;
+QPushButton#MountButton:hover { background-color: #0066CC; }
+
+/* Unmount State Color through Property */
+QPushButton#MountButton[isUnmount="true"] {
+    background-color: #FF3B30; /* iOS Red */
 }
 
-/* Secondary Buttons (Edit, Delete, Theme, Settings) */
-QPushButton[class="subBtn"] {
-    background-color: #edf2f7;
-    color: #4a5568;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-weight: 600;
+QPushButton#MountButton[isUnmount="true"]:hover {
+    background-color: #D72C21;
 }
 
-QPushButton[class="subBtn"]:hover {
-    background-color: #e2e8f0;
-    color: #2d3748;
+/* Ghost Buttons (Settings, Delete, etc) */
+QPushButton#GhostButton {
+    background-color: #EDF1F7;
+    color: #4A4A4F;
+    border: 1px solid #D1D1D6;
+    padding: 4px 10px;
 }
 
-/* Drive Row (Card) */
-#DriveCard {
-    background-color: #ffffff;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+QPushButton#GhostButton:hover {
+    background-color: #DDE4EE;
+    color: #1D1D1F;
 }
 
-#LetterIcon {
-    background-color: #f1f3f5;
-    color: #3182f6;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 12pt;
-    border: 1px solid #dee2e6;
-}
-
-#DriveTitle { font-size: 10pt; font-weight: 700; color: #212529; }
-#StatusLabel { font-size: 8pt; color: #718096; font-weight: 400; }
-
-/* Compact Log */
+/* Logs */
 #CompactLog {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 8pt;
-    color: #4a5568;
+    background-color: #FFFFFF;
+    border: 1px solid #D1D1D6;
+    border-radius: 10px;
+    font-family: 'Consolas', monospace;
+    font-size: 8.5pt;
+    color: #4A4A4F;
+    padding: 5px;
+}
+
+/* ScrollArea cleanup */
+QScrollArea { border: none; background: transparent; }
+QScrollBar:vertical {
+    border: none;
+    background: transparent;
+    width: 6px;
+    border-radius: 3px;
+}
+QScrollBar::handle:vertical {
+    background: #C7C7CC;
+    border-radius: 3px;
 }
 
 QLineEdit, QComboBox {
-    background-color: white;
-    border: 1px solid #cbd5e0;
-    border-radius: 4px;
-    padding: 4px;
+    background-color: #FFFFFF;
+    border: 1px solid #D1D1D6;
+    border-radius: 6px;
+    padding: 5px;
 }
-
-QScrollArea { border: none; }
