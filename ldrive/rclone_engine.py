@@ -93,8 +93,14 @@ class RcloneEngine:
         drive_path = f"{drive_letter.upper()}:"
         
         # 기본 명령어 조립
-        # remote:root_folder 형식 (root가 /이면 생략 가능하지만 명시적으로 처리)
-        remote_path = f"{remote}:{root_folder}"
+        # remote:root_folder 형식
+        # root_folder가 / 이면 remote: 로 처리
+        if root_folder == "/":
+            remote_path = f"{remote}:"
+        else:
+            # root_folder가 /로 시작하면 제거 (remote:/folder -> remote:folder)
+            clean_root = root_folder.lstrip("/")
+            remote_path = f"{remote}:{clean_root}"
         
         volume_label = volname if volname else f"L-Drive ({remote})"
         

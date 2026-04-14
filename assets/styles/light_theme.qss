@@ -79,7 +79,6 @@ QPushButton:hover {
 
 #MountButton:hover {
     background-color: #1b64da;
-    transform: translateY(-1px);
 }
 
 #MountButton:pressed {
