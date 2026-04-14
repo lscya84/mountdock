@@ -1,10 +1,6 @@
-/* 
-   L-Drive Pro: Fluent Design System (Windows 11)
-   Light Theme - High Fidelity Mockup Style
-*/
-
+/* Windows 11 Fluent Light Theme - Industrial Polish */
 QWidget {
-    background-color: #F3F3F3; /* Windows 11 Mica Surface Simulation */
+    background-color: #F3F3F3;
     color: #1A1A1A;
     font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
     font-size: 10pt;
@@ -14,125 +10,104 @@ QMainWindow {
     background-color: #F3F3F3;
 }
 
-/* --- Header Section --- */
-#AppLogo {
-    font-size: 16pt;
-    font-weight: 700;
+#MainTitle {
+    font-size: 15pt;
+    font-weight: 800;
     color: #000000;
-    margin-left: 5px;
 }
 
-/* Primary "Add Drive" Button Style */
-#PrimaryAddBtn {
-    background-color: #0067C0;
-    color: #FFFFFF;
-    border-radius: 6px;
-    font-weight: 600;
-    padding: 6px 16px;
-    border: none;
-}
-#PrimaryAddBtn:hover { background-color: #1975C5; }
-#PrimaryAddBtn:pressed { background-color: #005A9E; }
-
-/* Ghost Buttons (Settings, Theme) */
-#HeaderIconBtn {
-    background-color: transparent;
-    color: #5D5D5D;
-    border-radius: 4px;
-    padding: 6px;
-    font-size: 12pt;
-}
-#HeaderIconBtn:hover { background-color: #E5E5E5; color: #000000; }
-
-/* --- Drive Card System --- */
+/* Card Row: Subtle elevation */
 #DriveCard {
     background-color: #FFFFFF;
     border: 1px solid #E5E5E5;
-    border-radius: 12px;
-    /* Subtle elevation shadow */
-}
-#DriveCard:hover {
-    border-color: #0067C0;
-    background-color: #FAFAFA;
+    border-radius: 8px;
 }
 
-#DriveLetterBadge {
+#LetterBadge {
     background-color: #F0F4F8;
     color: #0067C0;
-    border-radius: 8px;
+    border-radius: 22px;
     font-weight: 800;
     font-size: 13pt;
-}
-
-#DriveName {
-    font-size: 11pt;
-    font-weight: 600;
-    color: #1A1A1A;
-}
-
-/* Status Indicator Dots */
-#StatusDot_Connected { background-color: #107C10; border-radius: 4px; border: 1px solid #0D660D; }
-#StatusDot_Disconnected { background-color: #E81123; border-radius: 4px; border: 1px solid #B70F1C; }
-#StatusLabel { font-size: 9pt; color: #616161; }
-
-/* Card Action Buttons */
-#CardActionBtn {
-    background-color: #F0F2F5;
-    color: #1A1A1A;
-    border-radius: 6px;
-    font-weight: 600;
-    padding: 4px 10px;
     border: 1px solid #DCE3EA;
 }
-#CardActionBtn:hover { background-color: #E2E8F0; }
-#CardActionBtn:disabled { color: #A1A1A1; background-color: #F5F5F5; border-color: #E5E5E5; }
 
-/* Special Mount/Unmount Accent inside card */
-#CardAccentBtn {
-    background-color: #0067C0;
-    color: #FFFFFF;
+#CardTitle {
+    font-weight: 700;
+    font-size: 10.5pt;
+    color: #1A1A1A;
+}
+
+#CardStatus {
+    font-size: 8.5pt;
+    color: #616161;
+}
+
+/* GLOBAL BUTTON STYLING (Guaranteed Colors) */
+QPushButton {
     border-radius: 6px;
     font-weight: 600;
-    padding: 4px 12px;
-}
-#CardAccentBtn[isUnmount="true"] { background-color: #C42B1C; }
-
-/* --- Bottom Activity Section --- */
-#ActivityContainer {
-    background-color: #FFFFFF;
-    border-top: 1px solid #E5E5E5;
-    border-radius: 12px 12px 0 0;
-}
-
-#ActivityLog {
-    background-color: #FFFFFF;
+    padding: 6px 12px;
     border: none;
-    font-family: 'Segoe UI Variable Small', sans-serif;
+}
+
+/* START MOUNT (BLUE) */
+QPushButton#MountButton {
+    background-color: #0067C0 !important;
+    color: #FFFFFF !important;
+}
+
+QPushButton#MountButton:hover {
+    background-color: #1975C5 !important;
+}
+
+/* STOP UNMOUNT (RED) */
+QPushButton#UnmountButton {
+    background-color: #C42B1C !important;
+    color: #FFFFFF !important;
+}
+
+QPushButton#UnmountButton:hover {
+    background-color: #A82318 !important;
+}
+
+/* SECONDARY BUTTONS (SOFT GREY) */
+QPushButton#SubButton {
+    background-color: #F0F2F5 !important;
+    color: #1D1D1F !important;
+    border: 1px solid #E2E8F0;
+}
+
+QPushButton#SubButton:hover {
+    background-color: #E2E8F0 !important;
+}
+
+/* ACTIVITY MONITOR */
+#ActivityMonitor {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    font-family: 'Consolas', monospace;
     font-size: 9pt;
     color: #444444;
+    padding: 10px;
 }
 
-/* --- Empty State --- */
-#EmptyStateTitle { font-size: 14pt; font-weight: 600; color: #5D5D5D; }
-#EmptyStateDesc { color: #888888; font-size: 10pt; }
-
-/* --- ScrollBar (Windows 11 thin style) --- */
+/* Scroll Area Fixes */
+QScrollArea { border: none; background: transparent; }
 QScrollBar:vertical {
     border: none;
     background: transparent;
-    width: 4px;
-    margin: 4px 0 4px 0;
+    width: 6px;
 }
 QScrollBar::handle:vertical {
     background: #CCCCCC;
-    border-radius: 2px;
+    border-radius: 3px;
 }
-QScrollBar::handle:vertical:hover { background: #999999; }
 
-QComboBox, QLineEdit {
+QLineEdit, QComboBox {
     background-color: #FFFFFF;
     border: 1px solid #DCE3EA;
     border-radius: 6px;
-    padding: 6px;
+    padding: 5px;
 }
-QCheckBox::indicator { width: 18px; height: 18px; }

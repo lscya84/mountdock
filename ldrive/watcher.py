@@ -9,7 +9,7 @@ from ldrive.rclone_engine import RcloneEngine
 logger = logging.getLogger("Watcher")
 
 class LDriveWatcher(QThread):
-    status_changed = pyqtSignal(str) # Connected, Disconnected, Wait...
+    status_changed = pyqtSignal(str) 
     log_emitted = pyqtSignal(str)
 
     def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, 
@@ -27,10 +27,10 @@ class LDriveWatcher(QThread):
         self.drive_path = f"{self.drive_letter.upper()}:\\"
 
     def run(self):
-        logger.info(f"모니터링 시작: {self.remote}")
+        logger.info(f"Watcher 가동: {self.remote}")
         
-        # 1. 초기 상태 엄격 진단 (최대 10초)
-        if not self._check_initial_mount_success(timeout=10):
+        # 1. 초기 상태 엄격 체크 (최대 12초)
+        if not self._wait_and_validate_mount(timeout=12):
             self.status_changed.emit("Disconnected")
             return
 
@@ -40,18 +40,18 @@ class LDriveWatcher(QThread):
                 self.status_changed.emit("Connected")
                 self.msleep(5000)
             else:
-                self.log_emitted.emit(f"[Watcher] {self.remote} 연결 유실.")
+                self.log_emitted.emit(f"[Watcher] {self.remote} 연결 유실 감지.")
                 self._handle_reconnect()
 
-    def _check_initial_mount_success(self, timeout=10) -> bool:
-        """ 드라이브 문자가 OS에 실제로 나타나는지 교차 확인합니다. """
+    def _wait_and_validate_mount(self, timeout=12) -> bool:
+        """ 드라이브 문자가 OS에 나타나는지 매초 체크합니다. """
         for i in range(timeout):
             if not self.is_running: return False
             
-            # 프로세스 생존 여부 확인 (3초 이내 사망 대응)
+            # 프로세스 조기 사망 여부 초단위 체크
             if not self.engine.is_process_alive(self.drive_letter):
                 err = self.engine.last_err
-                msg = f"[Error] 마운트 실패: {err[:200]}" if err else "[Error] Rclone 프로세스가 비정상 종료되었습니다."
+                msg = f"[Error] 마운트 실패: {err[:200]}" if err else "[Error] Rclone 프로세스가 예기치 않게 종료됨."
                 self.log_emitted.emit(msg)
                 return False
             
@@ -60,11 +60,11 @@ class LDriveWatcher(QThread):
                 self.log_emitted.emit(f"[Success] {self.drive_letter}: 연결 완료.")
                 self.status_changed.emit("Connected")
                 return True
-                
-            self.status_changed.emit("Wait...")
+            
+            self.status_changed.emit("Mounting...")
             self.msleep(1000)
             
-        self.log_emitted.emit(f"[Timeout] {self.remote} 마운트 확인 실패 (드라이브가 탐색기에 나타나지 않음)")
+        self.log_emitted.emit(f"[Warning] {self.remote} 드라이브 발견 실패 (타임아웃)")
         return False
 
     def _check_connection(self) -> bool:
@@ -85,13 +85,13 @@ class LDriveWatcher(QThread):
         self.engine.unmount(self.drive_letter)
         
         while self.is_running:
-            self.status_changed.emit(f"Repair ({backoff}s)")
+            self.status_changed.emit(f"Fix ({backoff}s)")
             success = self.engine.mount(
                 self.remote, self.drive_letter, self.vfs_mode, 
                 self.root_folder, self.custom_args, self.volname
             )
             
-            if success and self._check_initial_mount_success(timeout=10):
+            if success and self._wait_and_validate_mount(timeout=12):
                 break
             
             self.msleep(backoff * 1000)
