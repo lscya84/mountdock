@@ -1,6 +1,6 @@
-/* Native Windows 11 Fluent Light Theme v3.0 */
+/* Windows 11 Native Polish Light Theme */
 QWidget {
-    background-color: #F9FAFB; /* Soft Neutral Background */
+    background-color: #F9FAFB;
     color: #1A1A1A;
     font-family: 'Segoe UI Variable Text', 'Malgun Gothic', sans-serif;
     font-size: 10pt;
@@ -10,114 +10,106 @@ QMainWindow {
     background-color: #F9FAFB;
 }
 
-#MainLogo {
-    font-size: 18pt;
+#AppTitle {
+    font-size: 15pt;
     font-weight: 800;
     color: #1A1A1A;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.2px;
 }
 
-/* Elevated Row Card */
+/* Card Row Detail */
 #DriveCard {
     background-color: #FFFFFF;
-    border: 1px solid #E0E3E7;
-    border-bottom: 3px solid #D9DEE4; /* Simulated Fluent Shadow */
-    border-radius: 12px;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    margin-right: 5px;
 }
 
-/* RoundedBadge Icon */
-#LetterBadge {
-    background-color: #EEF2F6;
+#IconBadge {
+    background-color: #F0F4F8;
     color: #0067C0;
-    border-radius: 22px;
+    border-radius: 20px;
     font-weight: 800;
-    font-size: 13pt;
+    font-size: 12pt;
     border: 1px solid #DCE3EA;
 }
 
-/* Text Hierarchies */
 #CardTitle {
-    font-size: 11pt;
     font-weight: 700;
-    color: #1D2129;
+    font-size: 10.5pt;
+    color: #1C1C1E;
 }
 
 #CardStatus {
     font-size: 8.5pt;
-    color: #616161;
+    color: #666666;
 }
 
-/* Global Button Base */
+/* GLOBAL BUTTON STYLING (HARD-CODED COLORS) */
 QPushButton {
-    border-radius: 8px;
-    font-weight: 600;
+    border-radius: 6px;
+    font-weight: 700; /* 10pt Bold as requested */
+    padding: 6px 12px;
     border: none;
-    padding: 6px 14px;
 }
 
-/* Action Buttons - Solid Secondary/Ghost */
-QPushButton#GhostBtn {
-    background-color: #F0F2F5;
-    color: #1D1D1F;
+/* START MOUNT / ADD (+ BLUE ACCENT) */
+QPushButton#MountButton {
+    background-color: #0067C0 !important;
+    color: #FFFFFF !important;
+}
+
+QPushButton#MountButton:hover {
+    background-color: #1975C5 !important;
+}
+
+/* STOP / UNMOUNT (RED ACCENT) */
+QPushButton#UnmountButton {
+    background-color: #C42B1C !important;
+    color: #FFFFFF !important;
+}
+
+QPushButton#UnmountButton:hover {
+    background-color: #A82318 !important;
+}
+
+/* SECONDARY BUTTONS (GHOST GREY) */
+QPushButton#SubButton {
+    background-color: #F0F2F5 !important;
+    color: #1D1D1F !important;
     border: 1px solid #E2E8F0;
 }
 
-QPushButton#GhostBtn:hover {
-    background-color: #E2E8F0;
-    border-color: #CBD5E1;
+QPushButton#SubButton:hover {
+    background-color: #E2E8F0 !important;
 }
 
-/* Accent Buttons - SOLID COLORS (Crucial Fix) */
-QPushButton#AccentBtn, QPushButton#MountBtn_Solid {
-    background-color: #0067C0; /* Windows Blue */
-    color: #FFFFFF;
-}
-
-QPushButton#AccentBtn:hover, QPushButton#MountBtn_Solid:hover {
-    background-color: #1975C5;
-}
-
-QPushButton#UnmountBtn_Solid {
-    background-color: #C42B1C; /* Windows Red */
-    color: #FFFFFF;
-}
-
-QPushButton#UnmountBtn_Solid:hover {
-    background-color: #A82318;
-}
-
-/* Activity Monitor */
-#ActivityLogBox {
+/* LOG MONITOR */
+#ActivityMonitor {
     background-color: #FFFFFF;
-    border: 1px solid #E0E3E7;
-    border-radius: 12px;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
     font-family: 'Consolas', monospace;
     font-size: 9pt;
-    color: #334155;
+    color: #444444;
     padding: 10px;
 }
 
-/* Scroll Area & Bar Cleanup */
+/* Scroll Area & Bar Fixes */
 QScrollArea { border: none; background: transparent; }
 QScrollBar:vertical {
     border: none;
     background: transparent;
     width: 8px;
-    margin: 10px 0 10px 0;
 }
 QScrollBar::handle:vertical {
-    background: #CBD5E1;
+    background: #CCCCCC;
     border-radius: 4px;
-}
-QScrollBar::handle:vertical:hover {
-    background: #94A3B8;
 }
 
 QLineEdit, QComboBox {
     background-color: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 8px;
-    padding: 6px;
+    border: 1px solid #DCE3EA;
+    border-radius: 6px;
+    padding: 4px;
 }
-
-QComboBox::drop-down { border: none; }
