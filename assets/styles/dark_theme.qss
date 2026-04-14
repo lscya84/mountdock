@@ -1,24 +1,22 @@
 QWidget {
-    background: #0f141c;
+    background: #11161d;
     color: #edf3fb;
     font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
     font-size: 8.5pt;
 }
 
 QMainWindow, QWidget#AppShell {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 #0f141c, stop:0.55 #111924, stop:1 #17202b);
+    background: #11161d;
 }
 
 QFrame#HeroPanel,
-QFrame#LogPanel,
 QFrame#StatCard,
 QFrame#DriveCard,
 QFrame#EmptyState,
 QDialog#SheetDialog {
-    background: rgba(24, 31, 42, 0.94);
+    background: rgba(24, 31, 42, 0.96);
     border: 1px solid rgba(212, 225, 245, 0.08);
-    border-radius: 16px;
+    border-radius: 14px;
 }
 
 QScrollArea#CardScroll,
@@ -27,30 +25,12 @@ QWidget#DriveListHost {
     border: none;
 }
 
-QLabel#EyebrowLabel {
-    color: #8ca6c1;
-    font-size: 8pt;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 QLabel#AppTitleHeader {
     color: #f3f7fd;
-    font-size: 13pt;
+    font-size: 12pt;
     font-weight: 700;
 }
 
-QLabel#AppSubtitle,
-QLabel#SectionSubtitle,
-QLabel#DialogSubtitle,
-QLabel#EmptySubtitle,
-QLabel#CardFootnote,
-QLabel#CardMeta {
-    color: #99abc1;
-}
-
-QLabel#SectionTitle,
 QLabel#DialogTitle,
 QLabel#EmptyTitle {
     color: #f5f8fd;
@@ -58,25 +38,22 @@ QLabel#EmptyTitle {
     font-weight: 700;
 }
 
-QLabel#StatLabel {
-    color: #8ea3bc;
-    font-size: 8pt;
-    font-weight: 600;
+QLabel#CardFootnote {
+    color: #99abc1;
 }
 
 QLabel#StatValue {
     color: #f4f8fd;
-    font-size: 11pt;
+    font-size: 9pt;
     font-weight: 700;
 }
 
 QLabel#LetterBadge {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 #183756, stop:1 #14446e);
+    background: #183756;
     color: #9dd6ff;
     border: 1px solid rgba(157, 214, 255, 0.16);
-    border-radius: 17px;
-    font-size: 10.5pt;
+    border-radius: 16px;
+    font-size: 10pt;
     font-weight: 700;
 }
 
@@ -94,7 +71,7 @@ QLabel#StatusPill {
     padding: 2px 8px;
     font-size: 8pt;
     font-weight: 600;
-    min-width: 72px;
+    min-width: 34px;
 }
 
 QLabel#StatusPill[state="connected"] {
@@ -110,30 +87,14 @@ QPushButton {
     font-weight: 600;
 }
 
-QPushButton:hover {
-    border-color: rgba(220, 232, 247, 0.10);
-}
-
-QPushButton:pressed {
-    padding-top: 9px;
-}
-
 QPushButton#AccentBtn {
     background: #0a6fe8;
     color: white;
 }
 
-QPushButton#AccentBtn:hover {
-    background: #1a7bf1;
-}
-
 QPushButton#DangerBtn {
     background: #ca473e;
     color: white;
-}
-
-QPushButton#DangerBtn:hover {
-    background: #d0544b;
 }
 
 QPushButton#GhostBtn {
@@ -142,18 +103,10 @@ QPushButton#GhostBtn {
     border-color: rgba(220, 232, 247, 0.12);
 }
 
-QPushButton#GhostBtn:hover {
-    background: rgba(255, 255, 255, 0.10);
-}
-
 QPushButton#GhostDangerBtn {
     background: rgba(202, 71, 62, 0.10);
     color: #ffb8b2;
     border-color: rgba(202, 71, 62, 0.18);
-}
-
-QPushButton#GhostDangerBtn:hover {
-    background: rgba(202, 71, 62, 0.16);
 }
 
 QLineEdit,
@@ -164,31 +117,18 @@ QPlainTextEdit {
     border: 1px solid rgba(212, 225, 245, 0.10);
     border-radius: 10px;
     padding: 6px 9px;
-    selection-background-color: #1d4f8f;
-}
-
-QLineEdit:focus,
-QComboBox:focus,
-QPlainTextEdit:focus {
-    border: 1px solid #3f98ff;
 }
 
 QComboBox::drop-down {
     border: none;
-    width: 28px;
-}
-
-QComboBox QAbstractItemView {
-    background: #17212d;
-    color: #edf3fb;
-    border: 1px solid rgba(212, 225, 245, 0.10);
-    selection-background-color: #1f4f86;
+    width: 24px;
 }
 
 QPlainTextEdit#ActivityMonitor {
     background: rgba(10, 15, 23, 0.92);
-    color: #bccbdb;
+    border: 1px solid rgba(212, 225, 245, 0.10);
     border-radius: 12px;
+    color: #bccbdb;
 }
 
 QLabel#WarningBanner {
@@ -196,19 +136,19 @@ QLabel#WarningBanner {
     color: #ffd089;
     border: 1px solid rgba(255, 176, 32, 0.22);
     border-radius: 10px;
-    padding: 7px 9px;
+    padding: 6px 8px;
     font-weight: 600;
 }
 
 QCheckBox {
-    spacing: 10px;
+    spacing: 8px;
     color: #e4edf7;
 }
 
 QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border-radius: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
     border: 1px solid rgba(212, 225, 245, 0.18);
     background: rgba(255, 255, 255, 0.04);
 }

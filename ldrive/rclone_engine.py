@@ -40,7 +40,7 @@ class RcloneEngine:
 
         remote_name = remote[:-1] if remote.endswith(":") else remote
         remote_path = f"{remote_name}:" if root_folder == "/" else f"{remote_name}:{root_folder.lstrip('/')}"
-        volume_label = volname.strip() if volname.strip() else f"L-Drive ({remote_name})"
+        volume_label = volname.strip() if volname.strip() else remote_name
 
         cmd = [
             self.rclone_path,
