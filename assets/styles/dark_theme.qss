@@ -1,4 +1,4 @@
-/* High-Density Compact Dark Theme */
+/* High-Density Text-Based Dark Theme */
 QWidget {
     background-color: #1a1b1e;
     color: #c1c2c5;
@@ -6,27 +6,47 @@ QWidget {
     font-size: 10pt;
 }
 
-QMainWindow {
-    background-color: #1a1b1e;
+QMainWindow { background-color: #1a1b1e; }
+
+#AppLogo { font-size: 14pt; font-weight: 800; color: #4dabf7; }
+
+/* Main Action Buttons (Mount, Save, Add) */
+QPushButton#actionBtn {
+    background-color: #1971c2;
+    color: white;
+    border-radius: 6px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border: none;
 }
 
-#AppLogo {
-    font-size: 14pt;
-    font-weight: 800;
-    color: #4dabf7;
+QPushButton#actionBtn:hover { background-color: #1864ab; }
+
+/* Special State: Unmount (Red) */
+QPushButton#actionBtn[isUnmount="true"] {
+    background-color: #e03131;
 }
 
-#HeaderButton {
-    background-color: #25262b;
+QPushButton#actionBtn[isUnmount="true"]:hover {
+    background-color: #c92a2a;
+}
+
+/* Secondary Buttons (Edit, Delete, Theme, Settings) */
+QPushButton#subBtn {
+    background-color: #2c2e33;
+    color: #909296;
     border: 1px solid #373a40;
     border-radius: 6px;
-    padding: 2px 4px;
     font-weight: 600;
-    color: #c1c2c5;
+    padding: 4px 10px;
 }
 
-#HeaderButton:hover { background-color: #2c2e33; }
+QPushButton#subBtn:hover {
+    background-color: #373a40;
+    color: #f8f9fa;
+}
 
+/* Row (Card) Style */
 #DriveCard {
     background-color: #25262b;
     border: 1px solid #373a40;
@@ -45,23 +65,7 @@ QMainWindow {
 #DriveTitle { font-size: 10pt; font-weight: 700; color: #f8f9fa; }
 #StatusLabel { font-size: 8pt; color: #909296; }
 
-QPushButton#MountButton {
-    background-color: #1971c2;
-    color: white;
-    border-radius: 6px;
-    font-weight: 700;
-}
-
-QPushButton#UnmountButton {
-    background-color: #e03131;
-    color: white;
-    border-radius: 6px;
-    font-weight: 700;
-}
-
-#GhostButton { background-color: transparent; border: none; }
-#GhostButton:hover { background-color: #373a40; border-radius: 4px; }
-
+/* Compact Log */
 #CompactLog {
     background-color: #141517;
     border: 1px solid #373a40;

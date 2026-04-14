@@ -3,7 +3,6 @@ import socket
 import os
 import logging
 import psutil
-import subprocess
 from PyQt6.QtCore import QThread, pyqtSignal
 from ldrive.rclone_engine import RcloneEngine
 
@@ -14,8 +13,7 @@ class LDriveWatcher(QThread):
     log_emitted = pyqtSignal(str)
 
     def __init__(self, engine: RcloneEngine, remote: str, drive_letter: str, vfs_mode: str, 
-                 root_folder: str = "/", custom_args: str = "", volname: str = "",
-                 process: subprocess.Popen = None):
+                 root_folder: str = "/", custom_args: str = "", volname: str = ""):
         super().__init__()
         self.engine = engine
         self.remote = remote
@@ -24,7 +22,6 @@ class LDriveWatcher(QThread):
         self.root_folder = root_folder
         self.custom_args = custom_args
         self.volname = volname
-        self.process = process # 현재 감시 중인 rclone 프로세스 객체
         
         self.is_running = True
         self.check_interval = 5
@@ -34,8 +31,8 @@ class LDriveWatcher(QThread):
     def run(self):
         logger.info(f"Watcher 스레드 시작: {self.remote}")
         
-        # 초기 생존 확인 (Race Condition 방지)
-        if not self._wait_and_check_alive(wait_sec=5):
+        # 초기 생존 확인
+        if not self._wait_and_check_alive(wait_sec=8):
             return
 
         while self.is_running:
@@ -43,20 +40,17 @@ class LDriveWatcher(QThread):
                 self.status_changed.emit("Connected")
                 self.msleep(self.check_interval * 1000)
             else:
-                self.status_changed.emit("Disconnected")
+                self.log_emitted.emit(f"[Watcher] {self.remote} 연결 유실 감지 (프로세스 종료 또는 드라이브 실종).")
                 self._handle_reconnect()
 
     def _wait_and_check_alive(self, wait_sec=8) -> bool:
-        """프로세스가 살아있는지 주기적으로 확인하며 대기합니다."""
+        """프로세스가 살아있는지 엔진을 통해 확인하며 대기합니다."""
         for i in range(wait_sec):
             if not self.is_running: return False
             
-            # 프로세스 사후 검증
-            if self.process and self.process.poll() is not None:
-                _, stderr = self.process.communicate()
-                err_msg = stderr.decode('utf-8', errors='ignore').strip()
-                self.log_emitted.emit(f"[Error] {self.remote} 프로세스가 즉시 종료됨 (Code: {self.process.returncode})")
-                if err_msg: self.log_emitted.emit(f"[Detail] {err_msg[:200]}")
+            # 프로세스 사후 검증 (엔진을 통해 확인)
+            if not self.engine.is_process_alive(self.drive_letter):
+                self.log_emitted.emit(f"[Error] {self.remote} rclone 프로세스가 예기치 않게 종료되었습니다.")
                 self.status_changed.emit("Error")
                 return False
             
@@ -67,12 +61,11 @@ class LDriveWatcher(QThread):
                 
             self.msleep(1000)
         
-        self.log_emitted.emit(f"[Warning] {self.remote} 마운트 명령은 유지 중이나 드라이브가 응답하지 않습니다.")
         return False
 
     def _check_connection(self) -> bool:
         # 프로세스 생존 확인
-        if self.process and self.process.poll() is not None:
+        if not self.engine.is_process_alive(self.drive_letter):
             return False
         # 네트워크 및 드라이브 확인
         return self._is_network_available() and self._check_drive_exists()
@@ -102,13 +95,12 @@ class LDriveWatcher(QThread):
             self.status_changed.emit(f"Reconnecting ({backoff}s...)")
             self.log_emitted.emit(f"[Watcher] {self.remote} 재연결 시도 중...")
             
-            # 새 프로세스 생성
-            self.process = self.engine.mount(
+            success = self.engine.mount(
                 self.remote, self.drive_letter, self.vfs_mode, 
                 self.root_folder, self.custom_args, self.volname
             )
             
-            if self.process and self._wait_and_check_alive(wait_sec=8):
+            if success and self._wait_and_check_alive(wait_sec=8):
                 self.log_emitted.emit(f"[Watcher] {self.remote} 재연결 성공!")
                 break
             

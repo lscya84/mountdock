@@ -1,33 +1,49 @@
-/* High-Density Compact Light Theme */
+/* High-Density Text-Based Light Theme */
 QWidget {
     background-color: #f8f9fa;
     color: #212529;
-    font-family: 'Segoe UI Variable Display', sans-serif;
+    font-family: 'Segoe UI Variable Display', -apple-system, sans-serif;
     font-size: 10pt;
 }
 
-QMainWindow {
-    background-color: #f8f9fa;
-}
+QMainWindow { background-color: #f8f9fa; }
 
-#AppLogo {
-    font-size: 14pt;
-    font-weight: 800;
-    color: #3182f6;
-}
+#AppLogo { font-size: 14pt; font-weight: 800; color: #3182f6; }
 
-/* Header Buttons */
-#HeaderButton {
-    background-color: #ffffff;
-    border: 1px solid #dee2e6;
+/* Main Action Buttons (Mount, Save, Add) */
+QPushButton#actionBtn {
+    background-color: #3182f6;
+    color: white;
     border-radius: 6px;
-    padding: 2px 4px;
-    font-weight: 600;
-    font-size: 9pt;
+    font-weight: 700;
+    padding: 6px 14px;
+    border: none;
 }
 
-#HeaderButton:hover {
-    background-color: #e9ecef;
+QPushButton#actionBtn:hover { background-color: #1b64da; }
+
+/* Special State: Unmount (Red) */
+QPushButton#actionBtn[isUnmount="true"] {
+    background-color: #e53e3e;
+}
+
+QPushButton#actionBtn[isUnmount="true"]:hover {
+    background-color: #c53030;
+}
+
+/* Secondary Buttons (Edit, Delete, Theme, Settings) */
+QPushButton#subBtn {
+    background-color: #edf2f7;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 4px 10px;
+}
+
+QPushButton#subBtn:hover {
+    background-color: #e2e8f0;
+    color: #2d3748;
 }
 
 /* Drive Row (Card) */
@@ -35,6 +51,7 @@ QMainWindow {
     background-color: #ffffff;
     border: 1px solid #e9ecef;
     border-radius: 8px;
+    margin-right: 2px;
 }
 
 #LetterIcon {
@@ -46,71 +63,24 @@ QMainWindow {
     border: 1px solid #dee2e6;
 }
 
-#DriveTitle {
-    font-size: 10pt;
-    font-weight: 700;
-    color: #212529;
-}
-
-#StatusLabel {
-    font-size: 8pt;
-    color: #adb5bd;
-    font-weight: 400;
-}
-
-/* Buttons */
-QPushButton#MountButton {
-    background-color: #3182f6;
-    color: white;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 9pt;
-    border: none;
-}
-
-QPushButton#MountButton:hover {
-    background-color: #1b64da;
-}
-
-QPushButton#UnmountButton {
-    background-color: #fa5252;
-    color: white;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 9pt;
-    border: none;
-}
-
-/* Ghost Buttons (Edit/Delete) */
-#GhostButton {
-    background-color: transparent;
-    border: none;
-    padding: 0px;
-}
-
-#GhostButton:hover {
-    background-color: #f1f3f5;
-    border-radius: 4px;
-}
+#DriveTitle { font-size: 10pt; font-weight: 700; color: #212529; }
+#StatusLabel { font-size: 8pt; color: #718096; font-weight: 400; }
 
 /* Compact Log */
 #CompactLog {
     background-color: #ffffff;
-    border: 1px solid #e9ecef;
+    border: 1px solid #e2e8f0;
     border-radius: 6px;
-    font-family: 'Consolas', monospace;
+    font-family: 'Consolas', 'Courier New', monospace;
     font-size: 8pt;
-    color: #495057;
+    color: #4a5568;
 }
 
-/* Inputs */
 QLineEdit, QComboBox {
     background-color: white;
-    border: 1px solid #ced4da;
+    border: 1px solid #cbd5e0;
     border-radius: 4px;
     padding: 4px;
 }
 
-QScrollArea {
-    border: none;
-}
+QScrollArea { border: none; }

@@ -70,7 +70,7 @@ class RcloneEngine:
             logger.error(f"리모트 목록 로드 실패: {e}")
             return []
 
-    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "", volname: str = "") -> subprocess.Popen:
+    def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "", volname: str = "") -> bool:
         """
         지정된 리모트를 특정 드라이브 문자로 마운트합니다.
         프로세스 객체를 반환하여 외부에서 상태를 모니터링할 수 있게 합니다.
@@ -131,6 +131,12 @@ class RcloneEngine:
         except Exception as e:
             logger.error(f"마운트 실행 중 오류 발생: {e}")
             return False
+
+    def is_process_alive(self, drive_letter: str) -> bool:
+        """지정된 드라이브의 rclone 프로세스가 살아있는지 확인합니다."""
+        if drive_letter not in self._active_mounts:
+            return False
+        return self._active_mounts[drive_letter].poll() is None
 
     def unmount(self, drive_letter: str) -> bool:
         """
