@@ -128,8 +128,7 @@ class LDriveApp:
             if proc:
                 watcher = LDriveWatcher(self.engine, profile["remote"], profile["letter"],
                                         profile["vfs_mode"], profile["root_folder"], 
-                                        profile.get("custom_args", ""), profile.get("volname", ""),
-                                        process=proc)
+                                        profile.get("custom_args", ""), profile.get("volname", ""))
                 watcher.status_changed.connect(card.set_status)
                 watcher.log_emitted.connect(self.window.append_log)
                 watcher.start()

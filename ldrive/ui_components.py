@@ -54,7 +54,7 @@ class DriveSettingsDialog(QDialog):
         
         btns = QHBoxLayout()
         save_btn = QPushButton("Save")
-        save_btn.setObjectName("actionBtn") # 클래스 기반의 QSS 연동을 위함
+        save_btn.setProperty("class", "actionBtn")
         cancel_btn = QPushButton("Cancel")
         save_btn.clicked.connect(self.accept)
         cancel_btn.clicked.connect(self.reject)
@@ -90,14 +90,12 @@ class DriveCardWidget(QFrame):
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(10)
 
-        # 1. Letter Icon Box
         self.icon_box = QLabel(self.profile['letter'])
         self.icon_box.setObjectName("LetterIcon")
         self.icon_box.setFixedSize(40, 40)
         self.icon_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.icon_box)
 
-        # 2. Info Block
         info_layout = QVBoxLayout()
         info_layout.setSpacing(0)
         self.title_label = QLabel(self.profile.get('volname') or self.profile['remote'])
@@ -110,23 +108,20 @@ class DriveCardWidget(QFrame):
         
         layout.addStretch()
 
-        # 3. Mount Toggle Button
         self.toggle_btn = QPushButton("▶ Mount")
-        self.toggle_btn.setObjectName("actionBtn")
-        self.toggle_btn.setFixedSize(85, 30)
-        self.toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_btn.setProperty("class", "actionBtn")
+        self.toggle_btn.setFixedSize(90, 32)
         self.toggle_btn.clicked.connect(self._on_toggle)
         layout.addWidget(self.toggle_btn)
 
-        # 4. Action Buttons (Ghost 텍스트 기반)
         self.edit_btn = QPushButton("Edit")
-        self.edit_btn.setObjectName("subBtn")
-        self.edit_btn.setFixedSize(50, 30)
+        self.edit_btn.setProperty("class", "subBtn")
+        self.edit_btn.setFixedSize(50, 32)
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
         
         self.delete_btn = QPushButton("Delete")
-        self.delete_btn.setObjectName("subBtn")
-        self.delete_btn.setFixedSize(60, 30)
+        self.delete_btn.setProperty("class", "subBtn")
+        self.delete_btn.setFixedSize(65, 32)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
 
         layout.addWidget(self.edit_btn)
@@ -139,14 +134,13 @@ class DriveCardWidget(QFrame):
         self.status_label.setText(status)
         if status == "Connected":
             self.toggle_btn.setText("⏹ Unmount")
-            self.toggle_btn.setProperty("isUnmount", True)
+            self.toggle_btn.setProperty("isUnmount", "true") # String for QSS consistency
             self.is_running = True
         else:
             self.toggle_btn.setText("▶ Mount")
-            self.toggle_btn.setProperty("isUnmount", False)
+            self.toggle_btn.setProperty("isUnmount", "false")
             self.is_running = False
         
-        # 스타일 강제 갱신
         self.toggle_btn.style().unpolish(self.toggle_btn)
         self.toggle_btn.style().polish(self.toggle_btn)
 
@@ -175,7 +169,6 @@ class LDriveMainWindow(QMainWindow):
         main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(10)
         
-        # Header Row
         header = QHBoxLayout()
         self.logo = QLabel("L-Drive Pro")
         self.logo.setObjectName("AppLogo")
@@ -183,17 +176,17 @@ class LDriveMainWindow(QMainWindow):
         header.addStretch()
         
         self.theme_btn = QPushButton("Theme")
-        self.theme_btn.setObjectName("subBtn")
+        self.theme_btn.setProperty("class", "subBtn")
         self.theme_btn.setFixedHeight(28)
         self.theme_btn.clicked.connect(self.theme_toggle_requested.emit)
 
         self.settings_btn = QPushButton("Settings")
-        self.settings_btn.setObjectName("subBtn")
+        self.settings_btn.setProperty("class", "subBtn")
         self.settings_btn.setFixedHeight(28)
         self.settings_btn.clicked.connect(self.settings_requested.emit)
 
         self.add_btn = QPushButton("+ Add")
-        self.add_btn.setObjectName("actionBtn")
+        self.add_btn.setProperty("class", "actionBtn")
         self.add_btn.setFixedHeight(28)
         self.add_btn.clicked.connect(self.add_requested.emit)
         
@@ -202,7 +195,6 @@ class LDriveMainWindow(QMainWindow):
         header.addWidget(self.add_btn)
         main_layout.addLayout(header)
 
-        # Drive Scroll List
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setStyleSheet("background: transparent; border: none;")
@@ -216,10 +208,9 @@ class LDriveMainWindow(QMainWindow):
         self.scroll.setWidget(self.container)
         main_layout.addWidget(self.scroll)
 
-        # Compact Logs
         self.log_viewer = QPlainTextEdit()
         self.log_viewer.setReadOnly(True)
-        self.log_viewer.setFixedHeight(100)
+        self.log_viewer.setFixedHeight(110)
         self.log_viewer.setObjectName("CompactLog")
         main_layout.addWidget(self.log_viewer)
 
@@ -277,7 +268,7 @@ class GlobalSettingsDialog(QDialog):
         
         btns = QHBoxLayout()
         save = QPushButton("Save")
-        save.setObjectName("actionBtn")
+        save.setProperty("class", "actionBtn")
         save.clicked.connect(self.accept)
         btns.addWidget(save)
         layout.addLayout(btns)
@@ -300,7 +291,7 @@ class LDriveTrayIcon(QSystemTrayIcon):
 
     def _setup_menu(self):
         menu = QMenu()
-        show = QAction("Open Dashboard", self); show.triggered.connect(self.show_requested.emit)
-        ex = QAction("Exit App", self); ex.triggered.connect(self.exit_requested.emit)
+        show = QAction("Open", self); show.triggered.connect(self.show_requested.emit)
+        ex = QAction("Exit", self); ex.triggered.connect(self.exit_requested.emit)
         menu.addAction(show); menu.addSeparator(); menu.addAction(ex)
         self.setContextMenu(menu)

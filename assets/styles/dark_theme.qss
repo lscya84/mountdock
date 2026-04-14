@@ -11,37 +11,35 @@ QMainWindow { background-color: #1a1b1e; }
 #AppLogo { font-size: 14pt; font-weight: 800; color: #4dabf7; }
 
 /* Main Action Buttons (Mount, Save, Add) */
-QPushButton#actionBtn {
+QPushButton[class="actionBtn"] {
     background-color: #1971c2;
     color: white;
     border-radius: 6px;
     font-weight: 700;
-    padding: 6px 14px;
     border: none;
 }
 
-QPushButton#actionBtn:hover { background-color: #1864ab; }
+QPushButton[class="actionBtn"]:hover { background-color: #1864ab; }
 
 /* Special State: Unmount (Red) */
-QPushButton#actionBtn[isUnmount="true"] {
+QPushButton[class="actionBtn"][isUnmount="true"] {
     background-color: #e03131;
 }
 
-QPushButton#actionBtn[isUnmount="true"]:hover {
+QPushButton[class="actionBtn"][isUnmount="true"]:hover {
     background-color: #c92a2a;
 }
 
 /* Secondary Buttons (Edit, Delete, Theme, Settings) */
-QPushButton#subBtn {
+QPushButton[class="subBtn"] {
     background-color: #2c2e33;
     color: #909296;
     border: 1px solid #373a40;
     border-radius: 6px;
     font-weight: 600;
-    padding: 4px 10px;
 }
 
-QPushButton#subBtn:hover {
+QPushButton[class="subBtn"]:hover {
     background-color: #373a40;
     color: #f8f9fa;
 }
