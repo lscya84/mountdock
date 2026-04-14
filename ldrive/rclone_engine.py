@@ -103,6 +103,9 @@ class RcloneEngine:
             remote_path, drive_path,
             "--vfs-cache-mode", vfs_mode,
             "--volname", volume_label,
+            "--network-mode",
+            "--winfsp-mount-as=admin",
+            "--log-file", "rclone-mount.log",
             "--no-console"
         ]
 
