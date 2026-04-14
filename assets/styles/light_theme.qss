@@ -1,100 +1,112 @@
-/* Windows 11 Fluent Light Theme - Industrial Polish */
+/* 
+   Fluent Design Light Theme - Windows 11 Build 
+   Mica Effects & Premium Elevation 
+*/
+
 QWidget {
-    background-color: #F3F3F3;
+    background-color: #F3F3F3; /* Mica Background Simulation */
     color: #1A1A1A;
     font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
     font-size: 10pt;
 }
 
 QMainWindow {
-    background-color: #F3F3F3;
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F3F3F3, stop:1 #EDEDED);
 }
 
-#MainTitle {
-    font-size: 15pt;
-    font-weight: 800;
+#AppHeader {
+    font-size: 16pt;
+    font-weight: 700;
     color: #000000;
+    letter-spacing: -0.4px;
 }
 
-/* Card Row: Subtle elevation */
+/* Elevated Row Card */
 #DriveCard {
     background-color: #FFFFFF;
-    border: 1px solid #E5E5E5;
-    border-radius: 8px;
+    border: 1px solid #EAEAEA;
+    border-radius: 12px;
+}
+
+#DriveCard:hover {
+    border: 1px solid #D1D1D1;
+    background-color: #FAFAFA;
 }
 
 #LetterBadge {
     background-color: #F0F4F8;
     color: #0067C0;
-    border-radius: 22px;
+    border-radius: 10px;
     font-weight: 800;
-    font-size: 13pt;
+    font-size: 14pt;
     border: 1px solid #DCE3EA;
 }
 
-#CardTitle {
+/* Typography Hierarchies */
+#DriveName {
+    font-size: 13pt;
     font-weight: 700;
-    font-size: 10.5pt;
-    color: #1A1A1A;
+    color: #1D1D1F;
 }
 
-#CardStatus {
-    font-size: 8.5pt;
-    color: #616161;
+#StatusLabel {
+    font-size: 9.5pt;
+    color: #6E6E73;
 }
 
-/* GLOBAL BUTTON STYLING (Guaranteed Colors) */
-QPushButton {
-    border-radius: 6px;
-    font-weight: 600;
-    padding: 6px 12px;
+/* Slim Progress Bar */
+QProgressBar#SlimProgress {
     border: none;
+    background-color: #EEF2F6;
+    border-radius: 2px;
+}
+QProgressBar#SlimProgress::chunk {
+    background-color: #0067C0;
+    border-radius: 2px;
 }
 
-/* START MOUNT (BLUE) */
-QPushButton#MountButton {
-    background-color: #0067C0 !important;
-    color: #FFFFFF !important;
-}
-
-QPushButton#MountButton:hover {
-    background-color: #1975C5 !important;
-}
-
-/* STOP UNMOUNT (RED) */
-QPushButton#UnmountButton {
-    background-color: #C42B1C !important;
-    color: #FFFFFF !important;
-}
-
-QPushButton#UnmountButton:hover {
-    background-color: #A82318 !important;
-}
-
-/* SECONDARY BUTTONS (SOFT GREY) */
-QPushButton#SubButton {
-    background-color: #F0F2F5 !important;
-    color: #1D1D1F !important;
-    border: 1px solid #E2E8F0;
-}
-
-QPushButton#SubButton:hover {
-    background-color: #E2E8F0 !important;
-}
-
-/* ACTIVITY MONITOR */
-#ActivityMonitor {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5E5;
+/* Action Buttons */
+QPushButton#ConnectBtn {
+    background-color: #0067C0;
+    color: #FFFFFF;
     border-radius: 8px;
+    font-weight: 700;
+    border: none;
+    padding: 8px 16px;
+}
+QPushButton#ConnectBtn:hover { background-color: #1975C5; }
+QPushButton#ConnectBtn:pressed { background-color: #005A9E; }
+
+QPushButton#ConnectBtn[isUnmount="true"] {
+    background-color: #E81123; /* Windows Warning Red */
+}
+QPushButton#ConnectBtn[isUnmount="true"]:hover { background-color: #C42B1C; }
+
+QPushButton#SubBtn, QPushButton#IconicBtn {
+    background-color: #F5F5F7;
+    color: #1D1D1F;
+    border-radius: 8px;
+    border: 1px solid #E2E2E2;
+}
+QPushButton#SubBtn:hover, QPushButton#IconicBtn:hover {
+    background-color: #E8E8ED;
+}
+
+/* Bottom Log Section */
+#LogSection {
+    background-color: #FFFFFF;
+    border-top: 1px solid #E5E5E5;
+}
+
+#LogViewer {
+    background-color: transparent;
+    border: none;
     font-family: 'Consolas', monospace;
     font-size: 9pt;
-    color: #444444;
-    padding: 10px;
+    color: #48484A;
 }
 
-/* Scroll Area Fixes */
-QScrollArea { border: none; background: transparent; }
+/* Clean Scrollbars */
 QScrollBar:vertical {
     border: none;
     background: transparent;
@@ -107,7 +119,7 @@ QScrollBar::handle:vertical {
 
 QLineEdit, QComboBox {
     background-color: #FFFFFF;
-    border: 1px solid #DCE3EA;
+    border: 1px solid #D2D2D7;
     border-radius: 6px;
-    padding: 5px;
+    padding: 6px;
 }

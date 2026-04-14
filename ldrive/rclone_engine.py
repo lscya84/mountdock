@@ -22,8 +22,6 @@ class RcloneEngine:
 
     def get_remotes(self) -> List[str]:
         try:
-            # 리스트 방식으로 전달하면 OS가 공백을 처리하지만, 
-            # 사용자 요청에 따라 인용 부호를 명시적으로 고려한 조립을 수행할 수 있습니다.
             cmd = [self.rclone_path, "listremotes"]
             if self.rclone_conf_path:
                 cmd.extend(["--config", self.rclone_conf_path])
@@ -34,18 +32,17 @@ class RcloneEngine:
         except: return []
 
     def mount(self, remote: str, drive_letter: str, vfs_mode: str = "full", root_folder: str = "/", custom_args: str = "", volname: str = "") -> Optional[subprocess.Popen]:
+        """
+        Windows 세션 격리 방지를 위한 고급 마운트 로직.
+        """
         self.last_err = ""
         drive_path = f"{drive_letter.upper()}:"
-        
-        # 이전 동일 드라이브 마운트가 있다면 클린업
         self.unmount(drive_letter)
         
         remote_path = f"{remote}:" if root_folder == "/" else f"{remote}:{root_folder.lstrip('/')}"
         volume_label = volname if volname else f"L-Drive ({remote})"
         
-        # 사용자 요청 마운트 가독성/세션 격리 해결 옵션 강제 적용
-        # 1. --network-mode : 탐색기 노출 확률 증대
-        # 2. --winfsp-mount-as-network : 윈도우 세션 격리 문제 원천 차단
+        # [핵심] 탐색기 표시 보장을 위한 네트워크 모드 강제 및 따옴표 처리
         cmd = [
             f'"{self.rclone_path}"', 
             "mount",
@@ -64,12 +61,11 @@ class RcloneEngine:
         if custom_args:
             cmd.extend(shlex.split(custom_args))
 
-        # Popen 실행 시 shell=True를 사용하거나 리스트로 전달 (안정성을 위해 리스트 유지하되 인자마다 따옴표 포함)
         try:
+            # shell=False를 유지하되 전체 커맨드 문자열로 실행하여 따옴표 보존
             full_cmd = " ".join(cmd)
-            logger.info(f"마운트 실행: {full_cmd}")
+            logger.info(f"마운트 명령 실행: {full_cmd}")
             
-            # shell=True를 사용하여 따옴표가 명시된 문자열 명령어를 안전하게 전달
             process = subprocess.Popen(
                 full_cmd,
                 stdout=subprocess.PIPE,
@@ -77,15 +73,14 @@ class RcloneEngine:
                 text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP,
                 encoding='utf-8',
-                errors='replace',
-                shell=False # 리스트 전달 시 False가 기본
+                errors='replace'
             )
             
-            # 초기 3초간 생존 확인
+            # 초기 3초 생존 검사
             time.sleep(3)
             if process.poll() is not None:
                 self.last_err = process.stderr.read().strip()
-                logger.error(f"Rclone 즉시 에러 발생: {self.last_err}")
+                logger.error(f"마운트 즉시 실패: {self.last_err}")
                 return None
             
             self._active_mounts[drive_letter] = process
@@ -93,7 +88,7 @@ class RcloneEngine:
             
         except Exception as e:
             self.last_err = str(e)
-            logger.error(f"프로세스 시작 실패: {e}")
+            logger.error(f"실행 예외: {e}")
             return None
 
     def is_process_alive(self, drive_letter: str) -> bool:
@@ -118,7 +113,6 @@ class RcloneEngine:
             except: pass
             del self._active_mounts[drive_letter]
         
-        # 시스템에 남은 찌꺼기 정리
         try:
             for p in psutil.process_iter(['name', 'cmdline']):
                 if p.info['name'] == 'rclone.exe' and drive_path in (p.info['cmdline'] or []):

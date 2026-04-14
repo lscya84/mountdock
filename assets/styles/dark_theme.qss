@@ -1,33 +1,31 @@
-/* Windows 11 Fluent Dark Theme - Industrial Polish */
+/* Fluent Design Dark Theme - Windows 11 Build */
 QWidget {
     background-color: #202020;
-    color: #F8FAFC;
+    color: #F5F5F7;
     font-family: 'Segoe UI Variable Text', sans-serif;
 }
 
 QMainWindow { background-color: #202020; }
 
-#MainTitle { font-size: 15pt; font-weight: 800; color: #FFFFFF; }
+#AppHeader { font-size: 16pt; font-weight: 700; color: #FFFFFF; }
 
 #DriveCard {
     background-color: #2D2D2D;
-    border: 1px solid #333333;
-    border-radius: 8px;
+    border: 1px solid #3A3A3A;
+    border-radius: 12px;
 }
 
 #LetterBadge {
     background-color: #1A1A1A;
     color: #60CDFF;
-    border-radius: 22px;
+    border-radius: 10px;
     font-weight: 800;
 }
 
-QPushButton#MountButton { background-color: #0067C0 !important; color: #FFFFFF !important; }
-QPushButton#UnmountButton { background-color: #C42B1C !important; color: #FFFFFF !important; }
-QPushButton#SubButton { background-color: #333333 !important; color: #FFFFFF !important; }
+QPushButton#ConnectBtn { background-color: #0078D4; color: #FFFFFF; }
+QPushButton#ConnectBtn[isUnmount="true"] { background-color: #FF453A; }
 
-#ActivityMonitor {
-    background-color: #1A1A1A;
-    border: 1px solid #333333;
-    color: #BBBBBB;
-}
+QPushButton#SubBtn { background-color: #3A3A3A; color: #FFFFFF; border: 1px solid #48484A; }
+
+#LogSection { background-color: #1A1A1A; border-top: 1px solid #3A3A3A; }
+#LogViewer { background-color: transparent; color: #BBBBBB; }
