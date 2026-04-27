@@ -187,13 +187,16 @@ class LDriveApp:
         ])
 
     def handle_add_drive(self):
-        used_letters = [p.get("letter", "") for p in self.config.get_profiles()]
+        profiles = self.config.get_profiles()
+        used_letters = [p.get("letter", "") for p in profiles]
+        used_remotes = [p.get("remote", "") for p in profiles]
         system_used_letters = self._get_system_used_drive_letters()
         dialog = DriveSettingsDialog(
             self._get_available_remotes(),
             self.window,
             used_letters=used_letters,
             system_used_letters=system_used_letters,
+            used_remotes=used_remotes,
         )
         if dialog.exec():
             self.config.add_profile(dialog.get_data())
@@ -207,7 +210,9 @@ class LDriveApp:
             QMessageBox.warning(self.window, "Error", "Stop drive before editing.")
             return
 
-        used_letters = [p.get("letter", "") for p in self.config.get_profiles()]
+        profiles = self.config.get_profiles()
+        used_letters = [p.get("letter", "") for p in profiles]
+        used_remotes = [p.get("remote", "") for p in profiles]
         system_used_letters = self._get_system_used_drive_letters()
         dialog = DriveSettingsDialog(
             self._get_available_remotes(),
@@ -215,6 +220,7 @@ class LDriveApp:
             profile,
             used_letters=used_letters,
             system_used_letters=system_used_letters,
+            used_remotes=used_remotes,
         )
         if dialog.exec():
             self.config.update_profile(pid, dialog.get_data())

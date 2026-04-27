@@ -1,4 +1,5 @@
 import logging
+import os
 import shlex
 import subprocess
 import time
@@ -7,6 +8,17 @@ from typing import Dict, List, Optional
 import psutil
 
 logger = logging.getLogger("RcloneEngine")
+
+
+def _hidden_subprocess_kwargs():
+    if os.name != "nt":
+        return {}
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return {
+        "creationflags": subprocess.CREATE_NO_WINDOW,
+        "startupinfo": startupinfo,
+    }
 
 
 class RcloneEngine:
@@ -155,7 +167,15 @@ class RcloneEngine:
             cmd.extend(["--config", self.rclone_conf_path])
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=False)
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                shell=False,
+                **_hidden_subprocess_kwargs(),
+            )
             if result.returncode == 0:
                 return [line.strip().rstrip(":") for line in result.stdout.splitlines() if line.strip()]
             self.last_err = (result.stderr or result.stdout or "failed to list remotes").strip()

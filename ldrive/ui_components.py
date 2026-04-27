@@ -95,10 +95,12 @@ def _make_line_icon(kind: str, color: str, size: int = 16) -> QIcon:
 
 
 class DriveSettingsDialog(QDialog):
-    def __init__(self, remotes, parent=None, profile=None, used_letters=None, system_used_letters=None):
+    def __init__(self, remotes, parent=None, profile=None, used_letters=None, system_used_letters=None, used_remotes=None):
         super().__init__(parent)
         self.profile = profile or {}
-        self.remotes = remotes
+        current_remote = str(self.profile.get("remote", "")).strip()
+        blocked_remotes = {str(name).strip() for name in (used_remotes or []) if str(name).strip()}
+        self.remotes = [name for name in remotes if name == current_remote or name not in blocked_remotes]
         self.used_letters = {str(letter).replace(':', '').upper() for letter in (used_letters or [])}
         self.system_used_letters = {str(letter).replace(':', '').upper() for letter in (system_used_letters or [])}
         self.setObjectName("SheetDialog")

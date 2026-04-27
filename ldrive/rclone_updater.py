@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import tempfile
@@ -8,6 +9,17 @@ import requests
 
 
 GITHUB_LATEST = "https://api.github.com/repos/rclone/rclone/releases/latest"
+
+
+def _hidden_subprocess_kwargs():
+    if os.name != "nt":
+        return {}
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return {
+        "creationflags": subprocess.CREATE_NO_WINDOW,
+        "startupinfo": startupinfo,
+    }
 
 
 class RcloneUpdater:
@@ -31,6 +43,7 @@ class RcloneUpdater:
                 text=True,
                 timeout=15,
                 errors="replace",
+                **_hidden_subprocess_kwargs(),
             )
             output = (result.stdout or result.stderr or "").strip()
             match = re.search(r"rclone v([0-9][^\s]*)", output)
