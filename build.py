@@ -5,6 +5,9 @@ import sys
 import PyInstaller.__main__
 
 
+DATA_SEPARATOR = ";" if os.name == "nt" else ":"
+
+
 def build_exe(mode: str = "onedir"):
     print(f"빌드를 시작합니다. mode={mode}")
 
@@ -19,7 +22,7 @@ def build_exe(mode: str = "onedir"):
         "hide-early",
         "--name=L-Drive_Pro",
         f"--manifest={manifest_path}",
-        "--add-data=assets;assets",
+        f"--add-data=assets{DATA_SEPARATOR}assets",
         "--clean",
         "--workpath=build",
         "--distpath=dist",
