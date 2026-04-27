@@ -351,6 +351,63 @@ class RcloneUpdateWorker(QThread):
             self.failed.emit(str(exc))
 
 
+class RcloneUpdateDialog(QDialog):
+    def __init__(self, installed_version, latest_version, parent=None):
+        super().__init__(parent)
+        self.setObjectName("SheetDialog")
+        self.setWindowTitle("rclone Update")
+        self.setFixedWidth(420)
+        self.installed_version = installed_version or "unknown"
+        self.latest_version = latest_version or "unknown"
+        self._init_ui()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(14)
+        layout.setContentsMargins(18, 18, 18, 18)
+
+        title = QLabel(f"rclone {self.installed_version} → {self.latest_version}")
+        title.setObjectName("CardTitle")
+        title.setWordWrap(True)
+        layout.addWidget(title)
+
+        note = QLabel("Downloading the latest rclone build. Please wait.")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        layout.addWidget(self.progress)
+
+        self.status_label = QLabel("Starting update...")
+        self.status_label.setWordWrap(True)
+        layout.addWidget(self.status_label)
+
+        self.close_btn = QPushButton("Close")
+        self.close_btn.setObjectName("GhostBtn")
+        self.close_btn.setEnabled(False)
+        self.close_btn.clicked.connect(self.accept)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        buttons.addWidget(self.close_btn)
+        layout.addLayout(buttons)
+
+    def set_progress(self, value: int):
+        self.progress.setValue(max(0, min(100, value)))
+        self.status_label.setText(f"Downloading... {self.progress.value()}%")
+
+    def mark_done(self, message: str):
+        self.progress.setValue(100)
+        self.status_label.setText(message)
+        self.close_btn.setEnabled(True)
+
+    def mark_failed(self, message: str):
+        self.status_label.setText(message)
+        self.close_btn.setEnabled(True)
+
+
 class GlobalSettingsDialog(QDialog):
     def __init__(self, config_data, parent=None):
         super().__init__(parent)
@@ -386,12 +443,6 @@ class GlobalSettingsDialog(QDialog):
         self.rclone_version_label = QLabel(self.config_data.get("rclone_version_status", "rclone version: unknown"))
         self.rclone_version_label.setWordWrap(True)
         layout.addWidget(self.rclone_version_label)
-
-        self.rclone_progress = QProgressBar()
-        self.rclone_progress.setRange(0, 100)
-        self.rclone_progress.setValue(self.config_data.get("rclone_update_progress", 0))
-        self.rclone_progress.setVisible(self.config_data.get("rclone_update_in_progress", False))
-        layout.addWidget(self.rclone_progress)
 
         self.auto_start_check = QCheckBox("Auto start")
         self.auto_start_check.setChecked(self.config_data.get("auto_start", False))
@@ -444,6 +495,8 @@ class GlobalSettingsDialog(QDialog):
         self.rclone_update_btn = QPushButton("Update")
         self.rclone_update_btn.setObjectName("GhostBtn")
         self.rclone_update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.rclone_update_btn.setEnabled(self.config_data.get("rclone_update_available", False))
+        self.rclone_update_btn.setToolTip(self.config_data.get("rclone_update_tooltip", ""))
         self.rclone_update_btn.clicked.connect(self._request_rclone_update)
         layout.addWidget(self.rclone_update_btn)
         return row
@@ -485,16 +538,12 @@ class GlobalSettingsDialog(QDialog):
         self.update_rclone_requested = True
         self.accept()
 
-    def set_update_in_progress(self, in_progress: bool):
-        self.rclone_progress.setVisible(in_progress)
-        self.rclone_update_btn.setEnabled(not in_progress)
-
-    def set_update_progress(self, value: int):
-        self.rclone_progress.setVisible(True)
-        self.rclone_progress.setValue(max(0, min(100, value)))
-
-    def set_rclone_version_status(self, text: str):
+    def set_rclone_version_status(self, text: str, update_available=None, tooltip=None):
         self.rclone_version_label.setText(text)
+        if update_available is not None:
+            self.rclone_update_btn.setEnabled(update_available)
+        if tooltip is not None:
+            self.rclone_update_btn.setToolTip(tooltip)
 
     def get_data(self):
         return {

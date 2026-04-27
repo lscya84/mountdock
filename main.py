@@ -15,6 +15,7 @@ from ldrive.ui_components import (
     GlobalSettingsDialog,
     LDriveMainWindow,
     LDriveTrayIcon,
+    RcloneUpdateDialog,
     RcloneUpdateWorker,
 )
 from ldrive.watcher import LDriveWatcher
@@ -121,7 +122,10 @@ class LDriveApp:
 
     def handle_settings(self):
         settings_data = dict(self.config.config)
-        settings_data["rclone_version_status"] = self._get_rclone_version_status()
+        version_info = self._get_rclone_version_info()
+        settings_data["rclone_version_status"] = version_info["label"]
+        settings_data["rclone_update_available"] = version_info["update_available"]
+        settings_data["rclone_update_tooltip"] = version_info["tooltip"]
         dialog = GlobalSettingsDialog(settings_data, self.window)
         while True:
             if not dialog.exec():
@@ -311,23 +315,23 @@ class LDriveApp:
                     "rclone Update",
                     f"Already up to date.\n\nInstalled: {installed_version}\nLatest: {latest_version}",
                 )
-                dialog.set_rclone_version_status(self._get_rclone_version_status())
+                info = self._get_rclone_version_info()
+                dialog.set_rclone_version_status(info["label"], info["update_available"], info["tooltip"])
                 return
 
-            dialog.set_update_in_progress(True)
-            dialog.set_update_progress(0)
+            update_dialog = RcloneUpdateDialog(installed_version, latest_version, self.window)
             worker = RcloneUpdateWorker(self.rclone_updater, target_dir, latest_version)
             self._active_rclone_worker = worker
-            worker.progress_changed.connect(dialog.set_update_progress)
-            worker.finished_with_result.connect(lambda result: self._on_rclone_update_finished(dialog, data, result))
-            worker.failed.connect(lambda message: self._on_rclone_update_failed(dialog, message))
+            worker.progress_changed.connect(update_dialog.set_progress)
+            worker.finished_with_result.connect(lambda result: self._on_rclone_update_finished(dialog, update_dialog, data, result))
+            worker.failed.connect(lambda message: self._on_rclone_update_failed(dialog, update_dialog, message))
             worker.start()
+            update_dialog.exec()
         except Exception as exc:
             self.window.append_log(f"rclone update failed: {exc}")
             QMessageBox.critical(self.window, "rclone Update Failed", str(exc))
 
-    def _on_rclone_update_finished(self, dialog, data, result):
-        dialog.set_update_in_progress(False)
+    def _on_rclone_update_finished(self, dialog, update_dialog, data, result):
         installed = result["path"]
         relative_path = data.get("rclone_path", "").strip()
         if not relative_path:
@@ -346,18 +350,18 @@ class LDriveApp:
         else:
             message = f"Updated rclone to {result['version']}:\n\n{installed}"
 
-        dialog.set_rclone_version_status(self._get_rclone_version_status())
+        info = self._get_rclone_version_info()
+        dialog.set_rclone_version_status(info["label"], info["update_available"], info["tooltip"])
+        update_dialog.mark_done(message)
         self.window.append_log(f"rclone updated: {installed}")
         self._active_rclone_worker = None
-        QMessageBox.information(self.window, "rclone Update", message)
 
-    def _on_rclone_update_failed(self, dialog, message):
-        dialog.set_update_in_progress(False)
+    def _on_rclone_update_failed(self, dialog, update_dialog, message):
         self.window.append_log(f"rclone update failed: {message}")
+        update_dialog.mark_failed(message)
         self._active_rclone_worker = None
-        QMessageBox.critical(self.window, "rclone Update Failed", message)
 
-    def _get_rclone_version_status(self):
+    def _get_rclone_version_info(self):
         current_path = self.config.resolve_rclone_path()
         installed_version = self.rclone_updater.get_installed_version(current_path)
         try:
@@ -367,11 +371,27 @@ class LDriveApp:
 
         if installed_version and latest_version != "unknown":
             if self.rclone_updater.is_update_available(installed_version, latest_version):
-                return f"rclone version: {installed_version} (update available: {latest_version})"
-            return f"rclone version: {installed_version} (latest)"
+                return {
+                    "label": f"rclone version: {installed_version}",
+                    "update_available": True,
+                    "tooltip": f"Update available: {installed_version} → {latest_version}",
+                }
+            return {
+                "label": f"rclone version: {installed_version} (latest)",
+                "update_available": False,
+                "tooltip": f"Already latest: {installed_version}",
+            }
         if installed_version:
-            return f"rclone version: {installed_version}"
-        return "rclone version: not detected"
+            return {
+                "label": f"rclone version: {installed_version}",
+                "update_available": False,
+                "tooltip": "Could not verify latest version",
+            }
+        return {
+            "label": "rclone version: not detected",
+            "update_available": True,
+            "tooltip": "rclone not detected. Download latest rclone.",
+        }
 
     def _refresh_remote_cache(self):
         parsed = [item.get("name") for item in self.config.parse_rclone_conf(self.config.resolve_rclone_conf_path()) if item.get("name")]
