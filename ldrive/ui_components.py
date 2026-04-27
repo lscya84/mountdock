@@ -231,10 +231,11 @@ class DriveCardWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setMinimumHeight(50)
+        self.setMinimumHeight(42)
+        self.setObjectName("")
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 6, 10, 6)
-        layout.setSpacing(10)
+        layout.setContentsMargins(8, 2, 8, 2)
+        layout.setSpacing(8)
 
         self.status_dot = QLabel("")
         self.status_dot.setObjectName("StatusDot")
@@ -243,37 +244,33 @@ class DriveCardWidget(QFrame):
 
         self.badge = QLabel(self.profile["letter"])
         self.badge.setObjectName("LetterBadge")
-        self.badge.setFixedSize(28, 28)
+        self.badge.setFixedSize(24, 24)
         self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignVCenter)
 
         display_name = self.profile.get("volname") or self.profile["remote"]
         self.name_label = QLabel(display_name)
         self.name_label.setObjectName("CardTitle")
-        self.name_label.setMinimumWidth(130)
-        layout.addWidget(self.name_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.name_label.setWordWrap(False)
+        layout.addWidget(self.name_label, 1, Qt.AlignmentFlag.AlignVCenter)
 
-        self.path_label = QLabel(f"{self.profile['letter']}: {self.profile.get('root_folder', '/')}")
-        self.path_label.setObjectName("CardFootnote")
-        self.path_label.setMinimumWidth(120)
-        layout.addWidget(self.path_label, 1, Qt.AlignmentFlag.AlignVCenter)
-
-        self.toggle_btn = self._make_text_icon_button("play", tr(self.lang, "connect"), accent=True)
+        self.toggle_btn = self._make_icon_button("play", tr(self.lang, "connect"), accent=True)
         self.toggle_btn.clicked.connect(self._on_toggle)
         layout.addWidget(self.toggle_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        self.edit_btn = self._make_text_icon_button("edit", tr(self.lang, "edit"))
+        self.edit_btn = self._make_icon_button("edit", tr(self.lang, "edit"))
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
         layout.addWidget(self.edit_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        self.delete_btn = self._make_text_icon_button("trash", tr(self.lang, "delete"), danger=True)
+        self.delete_btn = self._make_icon_button("trash", tr(self.lang, "delete"), danger=True)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
         layout.addWidget(self.delete_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.set_status("Disconnected")
 
-    def _make_text_icon_button(self, kind, text, danger=False, accent=False):
-        button = QPushButton(text)
+    def _make_icon_button(self, kind, tooltip, danger=False, accent=False):
+        button = QPushButton("")
         button.icon_kind = kind
         if accent:
             button.icon_role = "accent"
@@ -284,9 +281,9 @@ class DriveCardWidget(QFrame):
         else:
             button.icon_role = "ghost"
             button.setObjectName("GhostBtn")
-        button.setToolTip(text)
+        button.setToolTip(tooltip)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setMinimumHeight(28)
+        button.setFixedSize(28, 28)
         return button
 
     def refresh_icons(self, theme_name="light"):
@@ -330,7 +327,7 @@ class DriveCardWidget(QFrame):
             self.status_dot.setProperty("state", "idle" if status == "Disconnected" else "busy")
             self.is_running = False
 
-        self.toggle_btn.setText(tr(self.lang, "disconnect") if status == "Connected" else tr(self.lang, "connect"))
+        self.toggle_btn.setToolTip(tr(self.lang, "disconnect") if status == "Connected" else tr(self.lang, "connect"))
         self.toggle_btn.style().unpolish(self.toggle_btn)
         self.toggle_btn.style().polish(self.toggle_btn)
         self.status_dot.style().unpolish(self.status_dot)
@@ -636,34 +633,31 @@ class LDriveMainWindow(QMainWindow):
         main_layout.addWidget(self.warning_banner)
 
         self.header_row = QFrame()
-        self.header_row.setObjectName("HeroPanel")
+        self.header_row.setObjectName("")
         header_layout = QHBoxLayout(self.header_row)
-        header_layout.setContentsMargins(10, 6, 10, 6)
-        header_layout.setSpacing(10)
+        header_layout.setContentsMargins(8, 2, 8, 2)
+        header_layout.setSpacing(8)
 
-        header_status = QLabel("")
-        header_status.setFixedWidth(10)
+        header_status = QLabel(tr(self.lang, "status"))
+        header_status.setMinimumWidth(36)
         header_drive = QLabel(tr(self.lang, "drive"))
         header_drive.setMinimumWidth(28)
         header_name = QLabel(tr(self.lang, "name"))
-        header_name.setMinimumWidth(130)
-        header_path = QLabel(tr(self.lang, "path"))
-        header_path.setMinimumWidth(120)
         header_actions = QLabel(tr(self.lang, "actions"))
 
-        for widget in (header_drive, header_name, header_path, header_actions):
+        for widget in (header_status, header_drive, header_name, header_actions):
             widget.setObjectName("CardFootnote")
 
         header_layout.addWidget(header_status)
         header_layout.addWidget(header_drive)
-        header_layout.addWidget(header_name)
-        header_layout.addWidget(header_path, 1)
+        header_layout.addWidget(header_name, 1)
         header_layout.addWidget(header_actions)
         main_layout.addWidget(self.header_row)
 
         self.scroll = QScrollArea()
         self.scroll.setObjectName("CardScroll")
         self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.container = QWidget()
         self.container.setObjectName("DriveListHost")
