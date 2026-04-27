@@ -727,6 +727,21 @@ class LDriveMainWindow(QMainWindow):
     def update_overview(self, total_count, active_count, theme_name):
         return
 
+    def set_language(self, lang: str):
+        self.lang = lang
+        self.setWindowTitle(tr(self.lang, "app_title"))
+        self._retranslate_top_bar()
+
+    def _retranslate_top_bar(self):
+        self.mount_all_btn.setText(tr(self.lang, "mount_all"))
+        self.mount_all_btn.setToolTip(tr(self.lang, "mount_all"))
+        self.unmount_all_btn.setText(tr(self.lang, "unmount_all"))
+        self.unmount_all_btn.setToolTip(tr(self.lang, "unmount_all"))
+        self.settings_btn.setText(tr(self.lang, "settings_title"))
+        self.settings_btn.setToolTip(tr(self.lang, "settings_title"))
+        self.add_btn.setText(tr(self.lang, "add"))
+        self.add_btn.setToolTip(tr(self.lang, "add"))
+
     def _apply_styles(self, theme_name="light"):
         qss_path = self.resource_path(os.path.join("assets", "styles", f"{theme_name}_theme.qss"))
         if os.path.exists(qss_path):

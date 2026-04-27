@@ -144,6 +144,8 @@ class LDriveApp:
                 else:
                     self.config.set(key, value)
             self.lang = data.get("language", self.lang)
+            self.window.set_language(self.lang)
+            self.tray.lang = self.lang
             self.engine.set_paths(
                 self.config.resolve_rclone_path(data["rclone_path"]),
                 self.config.resolve_rclone_conf_path(data["rclone_conf_path"]),
