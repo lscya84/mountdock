@@ -6,11 +6,11 @@ from PyQt6.QtCore import QSharedMemory, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
-from ldrive.config_manager import ConfigManager
-from ldrive.i18n import tr
-from ldrive.rclone_engine import RcloneEngine
-from ldrive.rclone_updater import RcloneUpdater
-from ldrive.ui_components import (
+from mountdock.config_manager import ConfigManager
+from mountdock.i18n import tr
+from mountdock.rclone_engine import RcloneEngine
+from mountdock.rclone_updater import RcloneUpdater
+from mountdock.ui_components import (
     DriveCardWidget,
     DriveSettingsDialog,
     GlobalSettingsDialog,
@@ -19,7 +19,7 @@ from ldrive.ui_components import (
     RcloneUpdateDialog,
     RcloneUpdateWorker,
 )
-from ldrive.watcher import LDriveWatcher
+from mountdock.watcher import LDriveWatcher
 
 
 class LDriveApp:

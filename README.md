@@ -53,28 +53,28 @@ It is not an official rclone application, but a desktop-focused tool designed to
 ## 저장소 이름 검토 / Repository Name Review
 
 **KR**  
-현재 저장소 이름은 아직 `ldrive`입니다.  
-브랜드 일관성을 위해 장기적으로는 `mountdock` 또는 `mountdock-win` 같은 이름으로 바꾸는 것이 좋습니다.
+현재 저장소 이름은 `mountdock`으로 변경되었습니다.  
+브랜드 일관성 면에서는 이 이름이 가장 자연스럽고 유지하기 좋습니다.
 
 추천:
 - `mountdock` → 가장 깔끔함
 - `mountdock-win` → Windows 앱임이 더 분명함
 - `mountdock-rclone` → 검색성은 좋지만 이름이 조금 김
 
-권장 방향:
-- GitHub star / issue / release 링크가 크게 중요하지 않은 지금 시점이라면 **`mountdock`으로 repo rename** 하는 편이 좋습니다.
+현재 상태:
+- GitHub 저장소는 이미 **`mountdock`** 으로 정리되었습니다.
 
 **EN**  
-The repository name is still `ldrive` for now.  
-For brand consistency, it would be better to eventually rename it to something like `mountdock` or `mountdock-win`.
+The repository name has already been changed to `mountdock`.  
+From a branding perspective, this is the cleanest and most maintainable choice.
 
 Recommended candidates:
 - `mountdock` → cleanest option
 - `mountdock-win` → makes the Windows focus explicit
 - `mountdock-rclone` → better for search, but a bit longer
 
-Recommended direction:
-- If preserving the old repo name is not important, renaming the repository to **`mountdock`** is the best long-term choice.
+Current status:
+- The GitHub repository is already aligned as **`mountdock`**.
 
 ---
 
