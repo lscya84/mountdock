@@ -127,16 +127,23 @@ class DriveSettingsDialog(QDialog):
 
         self.vol_edit = QLineEdit(self.profile.get("volname", ""))
         self.root_edit = QLineEdit(self.profile.get("root_folder", "/"))
+        self.cache_dir_edit = QLineEdit(self.profile.get("cache_dir", ""))
+        self.extra_args_edit = QLineEdit(self.profile.get("custom_args", self.profile.get("extra_flags", "")))
         self.vfs_combo = QComboBox()
         self.vfs_combo.addItems(["full", "writes", "off", "minimal"])
         if "vfs_mode" in self.profile:
             self.vfs_combo.setCurrentText(self.profile["vfs_mode"])
+        self.auto_mount_check = QCheckBox("Auto mount this drive on app launch")
+        self.auto_mount_check.setChecked(self.profile.get("auto_mount", False))
 
         form.addRow("Remote", self.remote_combo)
         form.addRow("Drive", self.letter_combo)
         form.addRow("Name", self.vol_edit)
         form.addRow("Path", self.root_edit)
+        form.addRow("Cache dir", self.cache_dir_edit)
+        form.addRow("Extra args", self.extra_args_edit)
         form.addRow("VFS", self.vfs_combo)
+        form.addRow("", self.auto_mount_check)
         layout.addLayout(form)
 
         buttons = QHBoxLayout()
@@ -163,7 +170,10 @@ class DriveSettingsDialog(QDialog):
             "volname": self.vol_edit.text().strip(),
             "root_folder": self.root_edit.text().strip() or "/",
             "vfs_mode": self.vfs_combo.currentText(),
-            "custom_args": "",
+            "auto_mount": self.auto_mount_check.isChecked(),
+            "cache_dir": self.cache_dir_edit.text().strip(),
+            "custom_args": self.extra_args_edit.text().strip(),
+            "extra_flags": self.extra_args_edit.text().strip(),
         }
 
 
@@ -317,10 +327,16 @@ class GlobalSettingsDialog(QDialog):
 
         self.auto_start_check = QCheckBox("Auto start")
         self.auto_start_check.setChecked(self.config_data.get("auto_start", False))
-        self.start_minimized_check = QCheckBox("Start minimized")
+        self.mount_on_launch_check = QCheckBox("Mount on launch")
+        self.mount_on_launch_check.setChecked(self.config_data.get("mount_on_launch", False))
+        self.start_minimized_check = QCheckBox("Start to tray")
         self.start_minimized_check.setChecked(self.config_data.get("start_minimized", False))
+        self.minimize_to_tray_check = QCheckBox("Minimize/close to tray")
+        self.minimize_to_tray_check.setChecked(self.config_data.get("minimize_to_tray", True))
         layout.addWidget(self.auto_start_check)
+        layout.addWidget(self.mount_on_launch_check)
         layout.addWidget(self.start_minimized_check)
+        layout.addWidget(self.minimize_to_tray_check)
 
         buttons = QHBoxLayout()
         buttons.addStretch()
@@ -379,7 +395,9 @@ class GlobalSettingsDialog(QDialog):
             "rclone_conf_path": self.rclone_conf_edit.text().strip(),
             "theme": self.theme_combo.currentText(),
             "auto_start": self.auto_start_check.isChecked(),
+            "mount_on_launch": self.mount_on_launch_check.isChecked(),
             "start_minimized": self.start_minimized_check.isChecked(),
+            "minimize_to_tray": self.minimize_to_tray_check.isChecked(),
         }
 
 
@@ -395,6 +413,11 @@ class LDriveMainWindow(QMainWindow):
         self.setMinimumSize(460, 330)
         self.resize(500, 360)
         self._init_ui()
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == event.Type.WindowStateChange and self.isMinimized():
+            self.hide()
 
     def _init_ui(self):
         central = QWidget()
@@ -531,7 +554,7 @@ class LDriveMainWindow(QMainWindow):
         try:
             base_path = sys._MEIPASS
         except Exception:
-            base_path = os.path.abspath(".")
+            base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         return os.path.join(base_path, relative_path)
 
     def append_log(self, message: str):
@@ -545,15 +568,47 @@ class LDriveMainWindow(QMainWindow):
 class LDriveTrayIcon(QSystemTrayIcon):
     show_requested = pyqtSignal()
     exit_requested = pyqtSignal()
+    toggle_mount_requested = pyqtSignal(str, bool)
 
     def __init__(self, icon, parent=None):
         super().__init__(icon, parent)
+        self.profile_states = []
+        self.refresh_menu()
+        self.activated.connect(self._on_activated)
+
+    def set_profiles(self, profile_states):
+        self.profile_states = profile_states
+        self.refresh_menu()
+
+    def refresh_menu(self):
         menu = QMenu()
         show = QAction("Open", self)
         show.triggered.connect(self.show_requested.emit)
-        close = QAction("Exit", self)
-        close.triggered.connect(self.exit_requested.emit)
         menu.addAction(show)
         menu.addSeparator()
+
+        if self.profile_states:
+            for item in self.profile_states:
+                mounted = item.get("mounted", False)
+                drive = item.get("letter", "?")
+                remote = item.get("remote", "")
+                root = item.get("root_folder", "/")
+                label = f"{'■' if mounted else '▶'} {drive}: ({remote}:{root})"
+                action = QAction(label, self)
+                action.triggered.connect(
+                    lambda _checked=False, pid=item["id"], should_start=not mounted: self.toggle_mount_requested.emit(pid, should_start)
+                )
+                menu.addAction(action)
+            menu.addSeparator()
+
+        close = QAction("Exit", self)
+        close.triggered.connect(self.exit_requested.emit)
         menu.addAction(close)
         self.setContextMenu(menu)
+
+    def _on_activated(self, reason):
+        if reason in (
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
+            self.show_requested.emit()

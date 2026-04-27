@@ -26,6 +26,7 @@ class LDriveWatcher(QThread):
         root_folder: str = "/",
         custom_args: str = "",
         volname: str = "",
+        cache_dir: str = "",
     ):
         super().__init__()
         self.engine = engine
@@ -35,6 +36,7 @@ class LDriveWatcher(QThread):
         self.root_folder = root_folder
         self.custom_args = custom_args
         self.volname = volname
+        self.cache_dir = cache_dir
         self.is_running = True
         self.drive_path = f"{self.drive_letter}:\\"
 
@@ -124,6 +126,7 @@ class LDriveWatcher(QThread):
                 self.root_folder,
                 self.custom_args,
                 self.volname,
+                self.cache_dir,
             )
 
             if process and self._strict_wait_for_mount(timeout=45):

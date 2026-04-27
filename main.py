@@ -2,6 +2,7 @@ import ctypes
 import os
 import sys
 
+from PyQt6.QtCore import QSharedMemory, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
@@ -21,13 +22,21 @@ class LDriveApp:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
+        self.app.setApplicationName("L-Drive")
         self.is_admin = self._is_running_as_admin()
+        self.started_from_startup = "--startup" in sys.argv
 
         self.config = ConfigManager()
+        self.shared_memory = None
+        if self.config.get("single_instance", True) and not self._acquire_single_instance():
+            QMessageBox.information(None, "L-Drive", "L-Drive is already running.")
+            raise SystemExit(0)
+
         self.engine = RcloneEngine(
-            self.config.get("rclone_path", "rclone.exe"),
-            self.config.get("rclone_conf_path", ""),
+            self.config.resolve_rclone_path(),
+            self.config.resolve_rclone_conf_path(),
         )
+        self.config.check_and_fix_startup()
         self.window = LDriveMainWindow()
 
         icon_path = LDriveMainWindow.resource_path(os.path.join("assets", "icon.ico"))
@@ -56,7 +65,11 @@ class LDriveApp:
         self.window._apply_styles(current_theme)
         self._setup_dashboards()
 
-        if self.config.get("start_minimized"):
+        if self.config.get("mount_on_launch"):
+            self._mount_startup_profiles()
+
+        should_start_hidden = self.config.get("start_minimized") or self.started_from_startup
+        if should_start_hidden:
             self.window.hide()
         else:
             self.window.show()
@@ -67,6 +80,7 @@ class LDriveApp:
         self.window.theme_toggle_requested.connect(self.handle_theme_toggle)
         self.tray.show_requested.connect(self._show_window)
         self.tray.exit_requested.connect(self.exit_app)
+        self.tray.toggle_mount_requested.connect(self.handle_toggle_mount)
         self.window.closeEvent = self._on_close_event
 
     def handle_theme_toggle(self):
@@ -80,11 +94,21 @@ class LDriveApp:
             )
 
     def _show_window(self):
-        self.window.show()
+        self.window.showNormal()
+        self.window.setWindowState(
+            self.window.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive
+        )
         self.window.raise_()
         self.window.activateWindow()
 
     def _on_close_event(self, event):
+        if self.config.get("minimize_to_tray", True):
+            self.window.hide()
+            self.tray.showMessage("L-Drive", "L-Drive is still running in the system tray.")
+            self.window.append_log("Window hidden to tray.")
+            event.ignore()
+            return
+
         self.exit_app()
         event.accept()
 
@@ -97,7 +121,10 @@ class LDriveApp:
                     self.config.set_auto_start(value)
                 else:
                     self.config.set(key, value)
-            self.engine.set_paths(data["rclone_path"], data["rclone_conf_path"])
+            self.engine.set_paths(
+                self.config.resolve_rclone_path(data["rclone_path"]),
+                self.config.resolve_rclone_conf_path(data["rclone_conf_path"]),
+            )
             self.window.append_log("Settings saved.")
             self.window.update_overview(
                 len(self.config.get_profiles()),
@@ -125,6 +152,16 @@ class LDriveApp:
             self.window.add_card(card)
 
         self.window.update_overview(len(profiles), active_count, self.config.get("theme", "light"))
+        self.tray.set_profiles([
+            {
+                "id": p["id"],
+                "letter": p["letter"],
+                "remote": p["remote"],
+                "root_folder": p.get("root_folder", "/"),
+                "mounted": p["id"] in self.watchers,
+            }
+            for p in profiles
+        ])
 
     def handle_add_drive(self):
         dialog = DriveSettingsDialog(self.engine.get_remotes(), self.window)
@@ -174,8 +211,9 @@ class LDriveApp:
                 profile["letter"],
                 profile["vfs_mode"],
                 profile["root_folder"],
-                profile.get("custom_args", ""),
+                profile.get("custom_args", profile.get("extra_flags", "")),
                 profile.get("volname", ""),
+                profile.get("cache_dir", ""),
             )
             if process:
                 watcher = LDriveWatcher(
@@ -184,8 +222,9 @@ class LDriveApp:
                     profile["letter"],
                     profile["vfs_mode"],
                     profile["root_folder"],
-                    profile.get("custom_args", ""),
+                    profile.get("custom_args", profile.get("extra_flags", "")),
                     profile.get("volname", ""),
+                    profile.get("cache_dir", ""),
                 )
                 watcher.status_changed.connect(card.set_status)
                 watcher.log_emitted.connect(self.window.append_log)
@@ -217,6 +256,17 @@ class LDriveApp:
             if isinstance(widget, DriveCardWidget) and widget.profile["id"] == pid:
                 return widget
         return None
+
+    def _mount_startup_profiles(self):
+        for profile in self.config.get_profiles():
+            if profile.get("auto_mount"):
+                self.handle_toggle_mount(profile["id"], True)
+
+    def _acquire_single_instance(self):
+        self.shared_memory = QSharedMemory("LDrive_SingleInstance")
+        if self.shared_memory.attach():
+            return False
+        return self.shared_memory.create(1)
 
     def exit_app(self):
         for watcher in self.watchers.values():

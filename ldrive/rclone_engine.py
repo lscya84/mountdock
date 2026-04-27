@@ -1,5 +1,5 @@
 import logging
-import os
+import shlex
 import subprocess
 import time
 from typing import Dict, List, Optional
@@ -32,32 +32,22 @@ class RcloneEngine:
         root_folder: str = "/",
         custom_args: str = "",
         volname: str = "",
+        cache_dir: str = "",
     ) -> Optional[subprocess.Popen]:
         self.last_err = ""
         letter = drive_letter.upper().replace(":", "")
         drive_path = f"{letter}:"
         self.unmount(letter)
 
-        remote_name = remote[:-1] if remote.endswith(":") else remote
-        remote_path = f"{remote_name}:" if root_folder == "/" else f"{remote_name}:{root_folder.lstrip('/')}"
-        volume_label = volname.strip() if volname.strip() else remote_name
-
-        cmd = [
-            self.rclone_path,
-            "mount",
-            remote_path,
-            drive_path,
-            "--vfs-cache-mode",
-            vfs_mode,
-            "--volname",
-            volume_label,
-        ]
-
-        if self.rclone_conf_path:
-            cmd.extend(["--config", self.rclone_conf_path])
-
-        if custom_args.strip():
-            cmd.extend(self._split_custom_args(custom_args))
+        cmd = self.build_mount_command(
+            remote=remote,
+            drive_letter=letter,
+            vfs_mode=vfs_mode,
+            root_folder=root_folder,
+            custom_args=custom_args,
+            volname=volname,
+            cache_dir=cache_dir,
+        )
 
         logger.info("마운트 실행: %s", subprocess.list2cmdline(cmd))
 
@@ -86,6 +76,45 @@ class RcloneEngine:
             self.last_err = str(exc)
             logger.error("마운트 프로세스 시작 실패: %s", exc)
             return None
+
+    def build_mount_command(
+        self,
+        remote: str,
+        drive_letter: str,
+        vfs_mode: str = "full",
+        root_folder: str = "/",
+        custom_args: str = "",
+        volname: str = "",
+        cache_dir: str = "",
+    ) -> List[str]:
+        remote_name = remote[:-1] if remote.endswith(":") else remote
+        normalized_root = (root_folder or "/").strip().replace("\\", "/")
+        normalized_root = normalized_root if normalized_root else "/"
+        remote_path = f"{remote_name}:" if normalized_root == "/" else f"{remote_name}:{normalized_root.lstrip('/')}"
+        volume_label = volname.strip() if volname.strip() else remote_name
+
+        cmd = [
+            self.rclone_path,
+            "mount",
+            remote_path,
+            f"{drive_letter}:" if not str(drive_letter).endswith(":") else str(drive_letter),
+            "--volname",
+            volume_label,
+        ]
+
+        if cache_dir.strip():
+            cmd.extend(["--cache-dir", cache_dir.strip()])
+
+        if vfs_mode.strip():
+            cmd.extend(["--vfs-cache-mode", vfs_mode])
+
+        if self.rclone_conf_path:
+            cmd.extend(["--config", self.rclone_conf_path])
+
+        if custom_args.strip():
+            cmd.extend(self._split_custom_args(custom_args))
+
+        return cmd
 
     def is_process_alive(self, drive_letter: str) -> bool:
         letter = drive_letter.upper().replace(":", "")
@@ -151,8 +180,6 @@ class RcloneEngine:
             pass
 
     def _split_custom_args(self, custom_args: str) -> List[str]:
-        import shlex
-
         try:
             return shlex.split(custom_args, posix=False)
         except ValueError:
