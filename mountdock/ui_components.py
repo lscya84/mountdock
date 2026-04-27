@@ -3,7 +3,7 @@ import string
 import sys
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal, QThread
-from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QBrush
+from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -616,8 +616,8 @@ class LDriveMainWindow(QMainWindow):
 
         self.brand_icon = QLabel()
         self.brand_icon.setObjectName("BrandIcon")
-        self.brand_icon.setPixmap(self._make_brand_pixmap())
-        self.brand_icon.setFixedSize(28, 28)
+        self.brand_icon.setFixedSize(40, 40)
+        self._refresh_brand_icon()
 
         self.title_label = QLabel(tr(self.lang, "app_title"))
         self.title_label.setObjectName("AppTitleHeader")
@@ -685,47 +685,13 @@ class LDriveMainWindow(QMainWindow):
         button.setMinimumHeight(30)
         return button
 
-    def _make_brand_pixmap(self, size: int = 28) -> QPixmap:
-        pixmap = QPixmap(size, size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(Qt.PenStyle.NoPen)
-
-        painter.setBrush(QColor("#D9E9FF"))
-        painter.drawEllipse(3, size - 8, size - 6, 5)
-
-        painter.setBrush(QBrush(QColor("#0F5CC0")))
-        body = QPainterPath()
-        body.moveTo(6, 18)
-        body.cubicTo(6, 11, 11, 7, 17, 7)
-        body.cubicTo(22, 7, 26, 10, 27, 15)
-        body.cubicTo(28, 15, 30, 17, 30, 19)
-        body.cubicTo(30, 22, 27, 24, 23, 24)
-        body.lineTo(13, 24)
-        body.cubicTo(9, 24, 6, 22, 6, 18)
-        painter.drawPath(body)
-
-        painter.setBrush(QColor("#0A4EA3"))
-        painter.drawEllipse(16, 5, 8, 8)
-
-        painter.setBrush(QColor("#FFFFFF"))
-        painter.drawEllipse(20, 7, 2, 2)
-
-        beak = QPainterPath()
-        beak.moveTo(23, 12)
-        beak.lineTo(28, 14)
-        beak.lineTo(23, 17)
-        beak.closeSubpath()
-        painter.setBrush(QColor("#F59F2F"))
-        painter.drawPath(beak)
-
-        painter.setBrush(QColor("#0A4EA3"))
-        painter.drawRoundedRect(8, 24, 14, 3, 1.5, 1.5)
-        painter.drawRoundedRect(12, 21, 7, 3, 1.5, 1.5)
-        painter.end()
-        return pixmap
+    def _refresh_brand_icon(self):
+        icon_path = self.resource_path(os.path.join("assets", "icon.ico"))
+        pixmap = QPixmap(icon_path)
+        if not pixmap.isNull():
+            self.brand_icon.setPixmap(
+                pixmap.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            )
 
     def refresh_icons(self, theme_name="light"):
         self.current_theme = theme_name
@@ -791,7 +757,7 @@ class LDriveMainWindow(QMainWindow):
         self.lang = lang
         self.setWindowTitle(tr(self.lang, "app_title"))
         self._retranslate_top_bar()
-        self.brand_icon.setPixmap(self._make_brand_pixmap())
+        self._refresh_brand_icon()
 
     def _retranslate_top_bar(self):
         self.title_label.setText(tr(self.lang, "app_title"))

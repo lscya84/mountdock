@@ -1,18 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <circle cx="128" cy="128" r="88" fill="none" stroke="#1F1F1F" stroke-width="8"/>
-
-  <circle cx="98" cy="108" r="16" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="5"/>
-  <circle cx="158" cy="108" r="16" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="5"/>
-  <circle cx="98" cy="108" r="4" fill="#1F1F1F"/>
-  <circle cx="158" cy="108" r="4" fill="#1F1F1F"/>
-
-  <path d="M82 146
-           Q128 126 174 146
-           Q128 172 82 146Z"
+  <circle cx="128" cy="128" r="88" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="10"/>
+  <circle cx="96" cy="108" r="20" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="6"/>
+  <circle cx="160" cy="108" r="20" fill="#FFFFFF" stroke="#1F1F1F" stroke-width="6"/>
+  <circle cx="96" cy="112" r="5" fill="#1F1F1F"/>
+  <circle cx="160" cy="112" r="5" fill="#1F1F1F"/>
+  <path d="M76 148 Q128 122 180 148 Q128 178 76 148Z"
         fill="#F4C542"
         stroke="#1F1F1F"
-        stroke-width="5"
+        stroke-width="6"
         stroke-linejoin="round"/>
-
-  <rect x="98" y="188" width="60" height="10" rx="5" fill="#1F1F1F"/>
 </svg>
