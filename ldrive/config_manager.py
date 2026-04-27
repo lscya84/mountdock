@@ -44,6 +44,7 @@ class ConfigManager:
     def __init__(self):
         self.config = {
             "theme": "light",
+            "language": "en",
             "auto_start": False,
             "start_minimized": False,
             "mount_on_launch": False,

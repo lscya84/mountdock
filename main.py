@@ -7,6 +7,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
 from ldrive.config_manager import ConfigManager
+from ldrive.i18n import tr
 from ldrive.rclone_engine import RcloneEngine
 from ldrive.rclone_updater import RcloneUpdater
 from ldrive.ui_components import (
@@ -30,9 +31,10 @@ class LDriveApp:
         self.started_from_startup = "--startup" in sys.argv
 
         self.config = ConfigManager()
+        self.lang = self.config.get("language", "en")
         self.shared_memory = None
         if self.config.get("single_instance", True) and not self._acquire_single_instance():
-            QMessageBox.information(None, "L-Drive", "L-Drive is already running.")
+            QMessageBox.information(None, "L-Drive", tr(self.lang, "already_running"))
             raise SystemExit(0)
 
         self.engine = RcloneEngine(
@@ -41,7 +43,7 @@ class LDriveApp:
         )
         self.rclone_updater = RcloneUpdater()
         self.config.check_and_fix_startup()
-        self.window = LDriveMainWindow()
+        self.window = LDriveMainWindow(self.lang)
 
         icon_path = LDriveMainWindow.resource_path(os.path.join("assets", "icon.ico"))
         self.default_icon = (
@@ -59,11 +61,10 @@ class LDriveApp:
             self.window.set_warning_banner(admin_message)
             self.window.append_log(f"[Warning] {admin_message}")
 
-        self.tray = LDriveTrayIcon(self.default_icon)
+        self.tray = LDriveTrayIcon(self.default_icon, self.lang)
         self.tray.show()
         self.watchers = {}
         self.remote_cache = []
-        self.rclone_version_status = "rclone version: unknown"
         self._active_rclone_worker = None
 
         self._wire_signals()
@@ -112,8 +113,8 @@ class LDriveApp:
     def _on_close_event(self, event):
         if self.config.get("minimize_to_tray", True):
             self.window.hide()
-            self.tray.showMessage("L-Drive", "L-Drive is still running in the system tray.")
-            self.window.append_log("Window hidden to tray.")
+            self.tray.showMessage("L-Drive", tr(self.lang, "tray_running"))
+            self.window.append_log(tr(self.lang, "window_hidden"))
             event.ignore()
             return
 
@@ -126,7 +127,7 @@ class LDriveApp:
         settings_data["rclone_version_status"] = version_info["label"]
         settings_data["rclone_update_available"] = version_info["update_available"]
         settings_data["rclone_update_tooltip"] = version_info["tooltip"]
-        dialog = GlobalSettingsDialog(settings_data, self.window)
+        dialog = GlobalSettingsDialog(settings_data, self.lang, self.window)
         while True:
             if not dialog.exec():
                 return
@@ -141,12 +142,13 @@ class LDriveApp:
                     self.config.set_auto_start(value)
                 else:
                     self.config.set(key, value)
+            self.lang = data.get("language", self.lang)
             self.engine.set_paths(
                 self.config.resolve_rclone_path(data["rclone_path"]),
                 self.config.resolve_rclone_conf_path(data["rclone_conf_path"]),
             )
             self._refresh_remote_cache()
-            self.window.append_log("Settings saved.")
+            self.window.append_log(tr(self.lang, "settings_saved"))
             self._setup_dashboards()
             return
 
@@ -161,7 +163,7 @@ class LDriveApp:
             return
 
         for profile in profiles:
-            card = DriveCardWidget(profile)
+            card = DriveCardWidget(profile, self.lang)
             card.toggle_requested.connect(self.handle_toggle_mount)
             card.edit_requested.connect(self.handle_edit_drive)
             card.delete_requested.connect(self.handle_delete_drive)
@@ -175,6 +177,7 @@ class LDriveApp:
     def _refresh_tray_profiles(self, profiles=None):
         if profiles is None:
             profiles = self.config.get_profiles()
+        self.tray.lang = self.lang
         self.tray.set_profiles([
             {
                 "id": p["id"],
@@ -193,6 +196,7 @@ class LDriveApp:
         system_used_letters = self._get_system_used_drive_letters()
         dialog = DriveSettingsDialog(
             self._get_available_remotes(),
+            self.lang,
             self.window,
             used_letters=used_letters,
             system_used_letters=system_used_letters,
@@ -207,7 +211,7 @@ class LDriveApp:
         if not profile:
             return
         if pid in self.watchers:
-            QMessageBox.warning(self.window, "Error", "Stop drive before editing.")
+            QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "stop_before_edit"))
             return
 
         profiles = self.config.get_profiles()
@@ -216,6 +220,7 @@ class LDriveApp:
         system_used_letters = self._get_system_used_drive_letters()
         dialog = DriveSettingsDialog(
             self._get_available_remotes(),
+            self.lang,
             self.window,
             profile,
             used_letters=used_letters,
@@ -243,9 +248,8 @@ class LDriveApp:
                 self.window.append_log("[Blocked] 관리자 권한 실행 중이라 마운트를 차단했습니다.")
                 QMessageBox.warning(
                     self.window,
-                    "Run Without Administrator",
-                    "관리자 권한으로 실행 중이면 마운트 드라이브가 일반 Windows 탐색기에서 보이지 않을 수 있습니다.\n\n"
-                    "L-Drive를 일반 권한으로 다시 실행한 뒤 마운트하세요.",
+                    tr(self.lang, "run_without_admin"),
+                    tr(self.lang, "admin_mount_blocked"),
                 )
                 card.set_status("Admin Block")
                 return
@@ -282,7 +286,7 @@ class LDriveApp:
                 self._refresh_tray_profiles()
             else:
                 self.window.append_log(f"Mount Error: {self.engine.last_error}")
-                QMessageBox.critical(self.window, "Mount Failed", f"Rclone Error:\n\n{self.engine.last_error}")
+                QMessageBox.critical(self.window, tr(self.lang, "mount_failed"), f"Rclone Error:\n\n{self.engine.last_error}")
         else:
             if pid in self.watchers:
                 self.watchers[pid].stop()
@@ -318,14 +322,14 @@ class LDriveApp:
             if installed_version and not self.rclone_updater.is_update_available(installed_version, latest_version):
                 QMessageBox.information(
                     self.window,
-                    "rclone Update",
-                    f"Already up to date.\n\nInstalled: {installed_version}\nLatest: {latest_version}",
+                    tr(self.lang, "rclone_update_title"),
+                    tr(self.lang, "already_up_to_date", installed=installed_version, latest=latest_version),
                 )
                 info = self._get_rclone_version_info()
                 dialog.set_rclone_version_status(info["label"], info["update_available"], info["tooltip"])
                 return
 
-            update_dialog = RcloneUpdateDialog(installed_version, latest_version, self.window)
+            update_dialog = RcloneUpdateDialog(installed_version, latest_version, self.lang, self.window)
             worker = RcloneUpdateWorker(self.rclone_updater, target_dir, latest_version)
             self._active_rclone_worker = worker
             worker.progress_changed.connect(update_dialog.set_progress)
@@ -335,7 +339,7 @@ class LDriveApp:
             update_dialog.exec()
         except Exception as exc:
             self.window.append_log(f"rclone update failed: {exc}")
-            QMessageBox.critical(self.window, "rclone Update Failed", str(exc))
+            QMessageBox.critical(self.window, tr(self.lang, "rclone_update_title"), str(exc))
 
     def _on_rclone_update_finished(self, dialog, update_dialog, data, result):
         installed = result["path"]
@@ -348,13 +352,9 @@ class LDriveApp:
         )
 
         if result.get("locked_fallback"):
-            message = (
-                f"rclone.exe is currently locked.\n\n"
-                f"Downloaded new file as:\n{installed}\n\n"
-                f"Close apps using rclone and replace the original file manually."
-            )
+            message = tr(self.lang, "rclone_locked", path=installed)
         else:
-            message = f"Updated rclone to {result['version']}:\n\n{installed}"
+            message = tr(self.lang, "rclone_updated", version=result["version"], path=installed)
 
         info = self._get_rclone_version_info()
         dialog.set_rclone_version_status(info["label"], info["update_available"], info["tooltip"])
@@ -378,25 +378,25 @@ class LDriveApp:
         if installed_version and latest_version != "unknown":
             if self.rclone_updater.is_update_available(installed_version, latest_version):
                 return {
-                    "label": f"rclone version: {installed_version}",
+                    "label": tr(self.lang, "rclone_update_available", version=installed_version),
                     "update_available": True,
-                    "tooltip": f"Update available: {installed_version} → {latest_version}",
+                    "tooltip": tr(self.lang, "tooltip_update_available", installed=installed_version, latest=latest_version),
                 }
             return {
-                "label": f"rclone version: {installed_version} (latest)",
+                "label": tr(self.lang, "rclone_latest", version=installed_version),
                 "update_available": False,
-                "tooltip": f"Already latest: {installed_version}",
+                "tooltip": tr(self.lang, "tooltip_latest", version=installed_version),
             }
         if installed_version:
             return {
-                "label": f"rclone version: {installed_version}",
+                "label": tr(self.lang, "rclone_update_available", version=installed_version),
                 "update_available": False,
                 "tooltip": "Could not verify latest version",
             }
         return {
-            "label": "rclone version: not detected",
+            "label": tr(self.lang, "rclone_not_detected"),
             "update_available": True,
-            "tooltip": "rclone not detected. Download latest rclone.",
+            "tooltip": tr(self.lang, "tooltip_not_detected"),
         }
 
     def _refresh_remote_cache(self):
@@ -408,9 +408,9 @@ class LDriveApp:
                 merged.append(name)
         self.remote_cache = merged
         if merged:
-            self.window.append_log(f"Loaded {len(merged)} remote(s).")
+            self.window.append_log(tr(self.lang, "loaded_remotes", count=len(merged)))
         else:
-            self.window.append_log("No remotes found. Check rclone.exe and rclone.conf path.")
+            self.window.append_log(tr(self.lang, "no_remotes"))
 
     def _get_available_remotes(self):
         if self.remote_cache:

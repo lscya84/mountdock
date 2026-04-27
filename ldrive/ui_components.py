@@ -26,6 +26,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ldrive.i18n import tr
+
 
 def _make_line_icon(kind: str, color: str, size: int = 16) -> QIcon:
     pixmap = QPixmap(size, size)
@@ -95,8 +97,9 @@ def _make_line_icon(kind: str, color: str, size: int = 16) -> QIcon:
 
 
 class DriveSettingsDialog(QDialog):
-    def __init__(self, remotes, parent=None, profile=None, used_letters=None, system_used_letters=None, used_remotes=None):
+    def __init__(self, remotes, lang="en", parent=None, profile=None, used_letters=None, system_used_letters=None, used_remotes=None):
         super().__init__(parent)
+        self.lang = lang
         self.profile = profile or {}
         current_remote = str(self.profile.get("remote", "")).strip()
         blocked_remotes = {str(name).strip() for name in (used_remotes or []) if str(name).strip()}
@@ -104,7 +107,7 @@ class DriveSettingsDialog(QDialog):
         self.used_letters = {str(letter).replace(':', '').upper() for letter in (used_letters or [])}
         self.system_used_letters = {str(letter).replace(':', '').upper() for letter in (system_used_letters or [])}
         self.setObjectName("SheetDialog")
-        self.setWindowTitle("Drive")
+        self.setWindowTitle(tr(self.lang, "drive_title"))
         self.setFixedWidth(380)
         self._init_ui()
 
@@ -145,28 +148,28 @@ class DriveSettingsDialog(QDialog):
         self.vfs_combo.addItems(["full", "writes", "off", "minimal"])
         if "vfs_mode" in self.profile:
             self.vfs_combo.setCurrentText(self.profile["vfs_mode"])
-        self.auto_mount_check = QCheckBox("Auto mount this drive on app launch")
+        self.auto_mount_check = QCheckBox(tr(self.lang, "auto_mount_drive"))
         self.auto_mount_check.setChecked(self.profile.get("auto_mount", False))
 
-        form.addRow("Remote", self.remote_combo)
-        form.addRow("Drive", self.letter_combo)
-        form.addRow("Name", self.vol_edit)
-        form.addRow("Path", self.root_edit)
-        form.addRow("Cache dir", self.cache_dir_edit)
-        form.addRow("Extra args", self.extra_args_edit)
-        form.addRow("VFS", self.vfs_combo)
+        form.addRow(tr(self.lang, "remote"), self.remote_combo)
+        form.addRow(tr(self.lang, "drive"), self.letter_combo)
+        form.addRow(tr(self.lang, "name"), self.vol_edit)
+        form.addRow(tr(self.lang, "path"), self.root_edit)
+        form.addRow(tr(self.lang, "cache_dir"), self.cache_dir_edit)
+        form.addRow(tr(self.lang, "extra_args"), self.extra_args_edit)
+        form.addRow(tr(self.lang, "vfs"), self.vfs_combo)
         form.addRow("", self.auto_mount_check)
         layout.addLayout(form)
 
         buttons = QHBoxLayout()
         buttons.addStretch()
 
-        cancel = QPushButton("Cancel")
+        cancel = QPushButton(tr(self.lang, "cancel"))
         cancel.setObjectName("GhostBtn")
         cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel.clicked.connect(self.reject)
 
-        save = QPushButton("Save")
+        save = QPushButton(tr(self.lang, "save"))
         save.setObjectName("AccentBtn")
         save.setCursor(Qt.CursorShape.PointingHandCursor)
         save.clicked.connect(self._validate_and_accept)
@@ -182,19 +185,19 @@ class DriveSettingsDialog(QDialog):
         extra_args = self.extra_args_edit.text().strip()
 
         if not remote:
-            QMessageBox.warning(self, "Validation Error", "Remote is required.")
+            QMessageBox.warning(self, tr(self.lang, "validation_error"), tr(self.lang, "remote_required"))
             return
 
         if root and not root.startswith("/"):
-            QMessageBox.warning(self, "Validation Error", "Path must start with '/'.")
+            QMessageBox.warning(self, tr(self.lang, "validation_error"), tr(self.lang, "path_must_start"))
             return
 
         if cache_dir and any(ch in cache_dir for ch in ['"', "'", "\n", "\r"]):
-            QMessageBox.warning(self, "Validation Error", "Cache dir contains invalid characters.")
+            QMessageBox.warning(self, tr(self.lang, "validation_error"), tr(self.lang, "cache_invalid"))
             return
 
         if any(ch in extra_args for ch in ["\n", "\r"]):
-            QMessageBox.warning(self, "Validation Error", "Extra args must be a single line.")
+            QMessageBox.warning(self, tr(self.lang, "validation_error"), tr(self.lang, "args_single_line"))
             return
 
         self.accept()
@@ -218,9 +221,10 @@ class DriveCardWidget(QFrame):
     edit_requested = pyqtSignal(str)
     delete_requested = pyqtSignal(str)
 
-    def __init__(self, profile):
+    def __init__(self, profile, lang="en"):
         super().__init__()
         self.profile = profile
+        self.lang = lang
         self.is_running = False
         self.current_theme = "light"
         self.setObjectName("DriveCard")
@@ -258,15 +262,15 @@ class DriveCardWidget(QFrame):
         info_layout.addWidget(self.path_label)
         layout.addLayout(info_layout, 1)
 
-        self.toggle_btn = self._make_icon_button("play", "Connect")
+        self.toggle_btn = self._make_icon_button("play", tr(self.lang, "connect"))
         self.toggle_btn.clicked.connect(self._on_toggle)
         layout.addWidget(self.toggle_btn)
 
-        self.edit_btn = self._make_icon_button("edit", "Edit")
+        self.edit_btn = self._make_icon_button("edit", tr(self.lang, "edit"))
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
         layout.addWidget(self.edit_btn)
 
-        self.delete_btn = self._make_icon_button("trash", "Delete", danger=True)
+        self.delete_btn = self._make_icon_button("trash", tr(self.lang, "delete"), danger=True)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
         layout.addWidget(self.delete_btn)
 
@@ -306,19 +310,19 @@ class DriveCardWidget(QFrame):
     def set_status(self, status):
         if status == "Connected":
             self.toggle_btn.icon_kind = "stop"
-            self.toggle_btn.setToolTip("Disconnect")
+            self.toggle_btn.setToolTip(tr(self.lang, "disconnect"))
             self.toggle_btn.setObjectName("DangerBtn")
             self.status_dot.setProperty("state", "connected")
             self.is_running = True
         elif status == "Admin Block":
             self.toggle_btn.icon_kind = "play"
-            self.toggle_btn.setToolTip("Connect")
+            self.toggle_btn.setToolTip(tr(self.lang, "connect"))
             self.toggle_btn.setObjectName("GhostBtn")
             self.status_dot.setProperty("state", "blocked")
             self.is_running = False
         else:
             self.toggle_btn.icon_kind = "play"
-            self.toggle_btn.setToolTip("Connect")
+            self.toggle_btn.setToolTip(tr(self.lang, "connect"))
             self.toggle_btn.setObjectName("AccentBtn" if status == "Disconnected" else "GhostBtn")
             self.status_dot.setProperty("state", "idle" if status == "Disconnected" else "busy")
             self.is_running = False
@@ -354,10 +358,11 @@ class RcloneUpdateWorker(QThread):
 
 
 class RcloneUpdateDialog(QDialog):
-    def __init__(self, installed_version, latest_version, parent=None):
+    def __init__(self, installed_version, latest_version, lang="en", parent=None):
         super().__init__(parent)
+        self.lang = lang
         self.setObjectName("SheetDialog")
-        self.setWindowTitle("rclone Update")
+        self.setWindowTitle(tr(self.lang, "rclone_update_title"))
         self.setFixedWidth(420)
         self.installed_version = installed_version or "unknown"
         self.latest_version = latest_version or "unknown"
@@ -373,7 +378,7 @@ class RcloneUpdateDialog(QDialog):
         title.setWordWrap(True)
         layout.addWidget(title)
 
-        note = QLabel("Downloading the latest rclone build. Please wait.")
+        note = QLabel(tr(self.lang, "rclone_update_downloading"))
         note.setWordWrap(True)
         layout.addWidget(note)
 
@@ -382,11 +387,11 @@ class RcloneUpdateDialog(QDialog):
         self.progress.setValue(0)
         layout.addWidget(self.progress)
 
-        self.status_label = QLabel("Starting update...")
+        self.status_label = QLabel(tr(self.lang, "rclone_update_starting"))
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
-        self.close_btn = QPushButton("Close")
+        self.close_btn = QPushButton(tr(self.lang, "close"))
         self.close_btn.setObjectName("GhostBtn")
         self.close_btn.setEnabled(False)
         self.close_btn.clicked.connect(self.accept)
@@ -398,7 +403,7 @@ class RcloneUpdateDialog(QDialog):
 
     def set_progress(self, value: int):
         self.progress.setValue(max(0, min(100, value)))
-        self.status_label.setText(f"Downloading... {self.progress.value()}%")
+        self.status_label.setText(tr(self.lang, "rclone_downloading_progress", percent=self.progress.value()))
 
     def mark_done(self, message: str):
         self.progress.setValue(100)
@@ -411,11 +416,12 @@ class RcloneUpdateDialog(QDialog):
 
 
 class GlobalSettingsDialog(QDialog):
-    def __init__(self, config_data, parent=None):
+    def __init__(self, config_data, lang="en", parent=None):
         super().__init__(parent)
+        self.lang = lang
         self.config_data = config_data
         self.setObjectName("SheetDialog")
-        self.setWindowTitle("Settings")
+        self.setWindowTitle(tr(self.lang, "settings_title"))
         self.setFixedWidth(420)
         self.update_rclone_requested = False
         self._init_ui()
@@ -437,22 +443,31 @@ class GlobalSettingsDialog(QDialog):
         self.theme_combo.addItems(["light", "dark"])
         self.theme_combo.setCurrentText(self.config_data.get("theme", "light"))
 
-        form.addRow("rclone", self._build_rclone_row())
-        form.addRow("config", self._build_picker_row(self.rclone_conf_edit, "file"))
-        form.addRow("theme", self.theme_combo)
+        self.language_combo = QComboBox()
+        self.language_combo.addItem("English", "en")
+        self.language_combo.addItem("한국어", "ko")
+        current_lang = self.config_data.get("language", self.lang)
+        idx = self.language_combo.findData(current_lang)
+        if idx >= 0:
+            self.language_combo.setCurrentIndex(idx)
+
+        form.addRow(tr(self.lang, "rclone"), self._build_rclone_row())
+        form.addRow(tr(self.lang, "config"), self._build_picker_row(self.rclone_conf_edit, "file"))
+        form.addRow(tr(self.lang, "theme"), self.theme_combo)
+        form.addRow(tr(self.lang, "language"), self.language_combo)
         layout.addLayout(form)
 
-        self.rclone_version_label = QLabel(self.config_data.get("rclone_version_status", "rclone version: unknown"))
+        self.rclone_version_label = QLabel(self.config_data.get("rclone_version_status", tr(self.lang, "rclone_version_unknown")))
         self.rclone_version_label.setWordWrap(True)
         layout.addWidget(self.rclone_version_label)
 
-        self.auto_start_check = QCheckBox("Auto start")
+        self.auto_start_check = QCheckBox(tr(self.lang, "auto_start"))
         self.auto_start_check.setChecked(self.config_data.get("auto_start", False))
-        self.mount_on_launch_check = QCheckBox("Mount on launch")
+        self.mount_on_launch_check = QCheckBox(tr(self.lang, "mount_on_launch"))
         self.mount_on_launch_check.setChecked(self.config_data.get("mount_on_launch", False))
-        self.start_minimized_check = QCheckBox("Start to tray")
+        self.start_minimized_check = QCheckBox(tr(self.lang, "start_to_tray"))
         self.start_minimized_check.setChecked(self.config_data.get("start_minimized", False))
-        self.minimize_to_tray_check = QCheckBox("Minimize/close to tray")
+        self.minimize_to_tray_check = QCheckBox(tr(self.lang, "minimize_to_tray"))
         self.minimize_to_tray_check.setChecked(self.config_data.get("minimize_to_tray", True))
         layout.addWidget(self.auto_start_check)
         layout.addWidget(self.mount_on_launch_check)
@@ -462,12 +477,12 @@ class GlobalSettingsDialog(QDialog):
         buttons = QHBoxLayout()
         buttons.addStretch()
 
-        cancel = QPushButton("Cancel")
+        cancel = QPushButton(tr(self.lang, "cancel"))
         cancel.setObjectName("GhostBtn")
         cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel.clicked.connect(self.reject)
 
-        save = QPushButton("Save")
+        save = QPushButton(tr(self.lang, "save"))
         save.setObjectName("AccentBtn")
         save.setCursor(Qt.CursorShape.PointingHandCursor)
         save.clicked.connect(self.accept)
@@ -494,7 +509,7 @@ class GlobalSettingsDialog(QDialog):
         layout.addWidget(browse_button)
         self.rclone_path_edit.browse_button = browse_button
 
-        self.rclone_update_btn = QPushButton("Update")
+        self.rclone_update_btn = QPushButton(tr(self.lang, "update"))
         self.rclone_update_btn.setObjectName("GhostBtn")
         self.rclone_update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.rclone_update_btn.setEnabled(self.config_data.get("rclone_update_available", False))
@@ -525,9 +540,9 @@ class GlobalSettingsDialog(QDialog):
         current = target_edit.text().strip()
         start = current or os.path.expanduser("~")
         if mode == "file":
-            selected, _ = QFileDialog.getOpenFileName(self, "Select File", start)
+            selected, _ = QFileDialog.getOpenFileName(self, tr(self.lang, "config"), start)
         else:
-            selected = QFileDialog.getExistingDirectory(self, "Select Folder", start)
+            selected = QFileDialog.getExistingDirectory(self, tr(self.lang, "cache_dir"), start)
         if selected:
             target_edit.setText(selected)
 
@@ -552,6 +567,7 @@ class GlobalSettingsDialog(QDialog):
             "rclone_path": self.rclone_path_edit.text().strip() or "rclone.exe",
             "rclone_conf_path": self.rclone_conf_edit.text().strip(),
             "theme": self.theme_combo.currentText(),
+            "language": self.language_combo.currentData(),
             "auto_start": self.auto_start_check.isChecked(),
             "mount_on_launch": self.mount_on_launch_check.isChecked(),
             "start_minimized": self.start_minimized_check.isChecked(),
@@ -564,10 +580,11 @@ class LDriveMainWindow(QMainWindow):
     settings_requested = pyqtSignal()
     theme_toggle_requested = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, lang="en"):
         super().__init__()
+        self.lang = lang
         self.current_theme = "light"
-        self.setWindowTitle("L-Drive")
+        self.setWindowTitle(tr(self.lang, "app_title"))
         self.setMinimumSize(460, 330)
         self.resize(500, 360)
         self._init_ui()
@@ -591,16 +608,16 @@ class LDriveMainWindow(QMainWindow):
         top_layout.setContentsMargins(10, 8, 10, 8)
         top_layout.setSpacing(6)
 
-        title = QLabel("L-Drive")
+        title = QLabel(tr(self.lang, "app_title"))
         title.setObjectName("AppTitleHeader")
         top_layout.addWidget(title)
         top_layout.addStretch()
 
-        self.theme_btn = self._make_top_icon_button("theme", "Theme")
+        self.theme_btn = self._make_top_icon_button("theme", tr(self.lang, "theme"))
         self.theme_btn.clicked.connect(self.theme_toggle_requested.emit)
-        self.settings_btn = self._make_top_icon_button("settings", "Settings")
+        self.settings_btn = self._make_top_icon_button("settings", tr(self.lang, "settings_title"))
         self.settings_btn.clicked.connect(self.settings_requested.emit)
-        self.add_btn = self._make_top_icon_button("add", "Add", accent=True)
+        self.add_btn = self._make_top_icon_button("add", tr(self.lang, "drive_title"), accent=True)
         self.add_btn.clicked.connect(self.add_requested.emit)
 
         top_layout.addWidget(self.theme_btn)
@@ -683,7 +700,7 @@ class LDriveMainWindow(QMainWindow):
         layout.setContentsMargins(20, 22, 20, 22)
         layout.setSpacing(8)
 
-        title = QLabel("No drives")
+        title = QLabel(tr(self.lang, "no_drives"))
         title.setObjectName("EmptyTitle")
 
         add_btn = QPushButton("")
@@ -728,8 +745,9 @@ class LDriveTrayIcon(QSystemTrayIcon):
     exit_requested = pyqtSignal()
     toggle_mount_requested = pyqtSignal(str, bool)
 
-    def __init__(self, icon, parent=None):
+    def __init__(self, icon, lang="en", parent=None):
         super().__init__(icon, parent)
+        self.lang = lang
         self.profile_states = []
         self.refresh_menu()
         self.activated.connect(self._on_activated)
@@ -740,7 +758,7 @@ class LDriveTrayIcon(QSystemTrayIcon):
 
     def refresh_menu(self):
         menu = QMenu()
-        show = QAction("Open", self)
+        show = QAction(tr(self.lang, "open"), self)
         show.triggered.connect(self.show_requested.emit)
         menu.addAction(show)
         menu.addSeparator()
@@ -759,7 +777,7 @@ class LDriveTrayIcon(QSystemTrayIcon):
                 menu.addAction(action)
             menu.addSeparator()
 
-        close = QAction("Exit", self)
+        close = QAction(tr(self.lang, "exit"), self)
         close.triggered.connect(self.exit_requested.emit)
         menu.addAction(close)
         self.setContextMenu(menu)
