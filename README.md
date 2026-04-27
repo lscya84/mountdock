@@ -24,8 +24,8 @@ For portable use, prefer **onedir** builds instead of onefile.
 ### Recommended folder layout
 
 ```text
-dist/L-Drive_Pro/
-  L-Drive_Pro.exe
+dist/L-Drive/
+  L-Drive.exe
   rclone.exe
   rclone.conf
   assets/

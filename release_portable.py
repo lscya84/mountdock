@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DIST_DIR = ROOT / "dist"
-APP_DIR = DIST_DIR / "L-Drive_Pro"
+APP_DIR = DIST_DIR / "L-Drive"
 RELEASE_DIR = DIST_DIR / "release"
 
 
@@ -42,7 +42,7 @@ def package_release():
         "L-Drive Portable\n"
         "=================\n\n"
         "Recommended contents in this folder:\n"
-        "- L-Drive_Pro.exe\n"
+        "- L-Drive.exe\n"
         "- rclone.exe\n"
         "- rclone.conf (optional)\n\n"
         "If rclone.exe and rclone.conf are placed next to the app, L-Drive will prefer them.\n",
