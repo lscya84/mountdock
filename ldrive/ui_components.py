@@ -635,6 +635,32 @@ class LDriveMainWindow(QMainWindow):
         self.warning_banner.hide()
         main_layout.addWidget(self.warning_banner)
 
+        self.header_row = QFrame()
+        self.header_row.setObjectName("HeroPanel")
+        header_layout = QHBoxLayout(self.header_row)
+        header_layout.setContentsMargins(10, 6, 10, 6)
+        header_layout.setSpacing(10)
+
+        header_status = QLabel("")
+        header_status.setFixedWidth(10)
+        header_drive = QLabel(tr(self.lang, "drive"))
+        header_drive.setMinimumWidth(28)
+        header_name = QLabel(tr(self.lang, "name"))
+        header_name.setMinimumWidth(130)
+        header_path = QLabel(tr(self.lang, "path"))
+        header_path.setMinimumWidth(120)
+        header_actions = QLabel(tr(self.lang, "actions"))
+
+        for widget in (header_drive, header_name, header_path, header_actions):
+            widget.setObjectName("CardFootnote")
+
+        header_layout.addWidget(header_status)
+        header_layout.addWidget(header_drive)
+        header_layout.addWidget(header_name)
+        header_layout.addWidget(header_path, 1)
+        header_layout.addWidget(header_actions)
+        main_layout.addWidget(self.header_row)
+
         self.scroll = QScrollArea()
         self.scroll.setObjectName("CardScroll")
         self.scroll.setWidgetResizable(True)
@@ -696,6 +722,9 @@ class LDriveMainWindow(QMainWindow):
         self.warning_banner.setText(message)
         self.warning_banner.setVisible(bool(message))
 
+    def set_header_visible(self, visible: bool):
+        self.header_row.setVisible(visible)
+
     def show_empty_state(self):
         empty = QFrame()
         empty.setObjectName("EmptyState")
@@ -717,6 +746,7 @@ class LDriveMainWindow(QMainWindow):
         layout.addWidget(title, 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(add_btn, 0, Qt.AlignmentFlag.AlignHCenter)
         self.card_layout.addWidget(empty)
+        self.set_header_visible(False)
 
     def update_overview(self, total_count, active_count, theme_name):
         return

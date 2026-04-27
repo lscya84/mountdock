@@ -60,6 +60,7 @@ STRINGS = {
         "edit": "Edit",
         "delete": "Delete",
         "add": "Add",
+        "actions": "Actions",
         "no_drives": "No drives",
     },
     "ko": {
@@ -123,6 +124,7 @@ STRINGS = {
         "edit": "수정",
         "delete": "삭제",
         "add": "추가",
+        "actions": "작업",
         "no_drives": "등록된 드라이브가 없습니다",
     },
 }

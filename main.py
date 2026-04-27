@@ -162,6 +162,8 @@ class LDriveApp:
             self.window.update_overview(0, active_count, self.config.get("theme", "light"))
             return
 
+        self.window.set_header_visible(True)
+
         for profile in profiles:
             card = DriveCardWidget(profile, self.lang)
             card.toggle_requested.connect(self.handle_toggle_mount)
