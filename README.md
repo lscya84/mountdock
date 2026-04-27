@@ -43,6 +43,18 @@ Optional onefile build:
 python build.py onefile
 ```
 
+### Create a portable release zip
+
+```bash
+python release_portable.py
+```
+
+This builds the onedir app and creates:
+
+```text
+dist/release/L-Drive_Portable.zip
+```
+
 ### Portable behavior notes
 
 - `config.json` is stored next to the app
@@ -71,6 +83,18 @@ python build.py onefile
 - **VFS cache mode**
 - **Cache directory**
 - **Extra args**
+
+## Release checklist
+
+Before publishing a release:
+
+- [ ] Run `python build.py onedir`
+- [ ] Run `python release_portable.py`
+- [ ] Put `rclone.exe` into the portable folder if bundling it
+- [ ] Put `rclone.conf` into the portable folder if shipping a ready-to-use config
+- [ ] Test startup/tray/mount on a real Windows machine
+- [ ] Test a clean unzip-and-run flow from a different folder
+- [ ] Upload `L-Drive_Portable.zip` to GitHub Releases
 
 ## Recommended Windows test checklist
 
