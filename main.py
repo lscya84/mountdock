@@ -160,10 +160,9 @@ class LDriveApp:
 
         if not profiles:
             self.window.show_empty_state()
+            self.window.set_bulk_buttons_enabled(False, False)
             self.window.update_overview(0, active_count, self.config.get("theme", "light"))
             return
-
-        self.window.set_header_visible(True)
 
         for profile in profiles:
             card = DriveCardWidget(profile, self.lang)
@@ -174,6 +173,7 @@ class LDriveApp:
                 card.set_status("Connected")
             self.window.add_card(card)
 
+        self.window.set_bulk_buttons_enabled(active_count < len(profiles), active_count > 0)
         self.window.update_overview(len(profiles), active_count, self.config.get("theme", "light"))
         self._refresh_tray_profiles(profiles)
 

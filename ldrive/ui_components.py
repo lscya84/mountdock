@@ -231,11 +231,11 @@ class DriveCardWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setMinimumHeight(42)
+        self.setMinimumHeight(38)
         self.setObjectName("")
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 2, 8, 2)
-        layout.setSpacing(8)
+        layout.setContentsMargins(6, 1, 6, 1)
+        layout.setSpacing(6)
 
         self.status_dot = QLabel("")
         self.status_dot.setObjectName("StatusDot")
@@ -608,14 +608,14 @@ class LDriveMainWindow(QMainWindow):
         top_bar.setObjectName("HeroPanel")
         top_layout = QHBoxLayout(top_bar)
         top_layout.setContentsMargins(10, 8, 10, 8)
-        top_layout.setSpacing(6)
+        top_layout.setSpacing(8)
 
         title = QLabel(tr(self.lang, "app_title"))
         title.setObjectName("AppTitleHeader")
         top_layout.addWidget(title)
         top_layout.addStretch()
 
-        self.mount_all_btn = self._make_top_action_button("play", tr(self.lang, "mount_all"))
+        self.mount_all_btn = self._make_top_action_button("play", tr(self.lang, "mount_all"), accent=True)
         self.mount_all_btn.clicked.connect(self.mount_all_requested.emit)
         self.unmount_all_btn = self._make_top_action_button("stop", tr(self.lang, "unmount_all"))
         self.unmount_all_btn.clicked.connect(self.unmount_all_requested.emit)
@@ -635,28 +635,6 @@ class LDriveMainWindow(QMainWindow):
         self.warning_banner.setWordWrap(True)
         self.warning_banner.hide()
         main_layout.addWidget(self.warning_banner)
-
-        self.header_row = QFrame()
-        self.header_row.setObjectName("")
-        header_layout = QHBoxLayout(self.header_row)
-        header_layout.setContentsMargins(8, 2, 8, 2)
-        header_layout.setSpacing(8)
-
-        header_status = QLabel(tr(self.lang, "status"))
-        header_status.setMinimumWidth(36)
-        header_drive = QLabel(tr(self.lang, "drive"))
-        header_drive.setMinimumWidth(28)
-        header_name = QLabel(tr(self.lang, "name"))
-        header_actions = QLabel(tr(self.lang, "actions"))
-
-        for widget in (header_status, header_drive, header_name, header_actions):
-            widget.setObjectName("CardFootnote")
-
-        header_layout.addWidget(header_status)
-        header_layout.addWidget(header_drive)
-        header_layout.addWidget(header_name, 1)
-        header_layout.addWidget(header_actions)
-        main_layout.addWidget(self.header_row)
 
         self.scroll = QScrollArea()
         self.scroll.setObjectName("CardScroll")
@@ -720,8 +698,9 @@ class LDriveMainWindow(QMainWindow):
         self.warning_banner.setText(message)
         self.warning_banner.setVisible(bool(message))
 
-    def set_header_visible(self, visible: bool):
-        self.header_row.setVisible(visible)
+    def set_bulk_buttons_enabled(self, can_mount_any: bool, can_unmount_any: bool):
+        self.mount_all_btn.setEnabled(can_mount_any)
+        self.unmount_all_btn.setEnabled(can_unmount_any)
 
     def show_empty_state(self):
         empty = QFrame()
@@ -744,7 +723,6 @@ class LDriveMainWindow(QMainWindow):
         layout.addWidget(title, 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(add_btn, 0, Qt.AlignmentFlag.AlignHCenter)
         self.card_layout.addWidget(empty)
-        self.set_header_visible(False)
 
     def update_overview(self, total_count, active_count, theme_name):
         return
