@@ -86,21 +86,22 @@ class LDriveApp:
     def _wire_signals(self):
         self.window.add_requested.connect(self.handle_add_drive)
         self.window.settings_requested.connect(self.handle_settings)
-        self.window.theme_toggle_requested.connect(self.handle_theme_toggle)
+        self.window.mount_all_requested.connect(self.handle_mount_all)
+        self.window.unmount_all_requested.connect(self.handle_unmount_all)
         self.tray.show_requested.connect(self._show_window)
         self.tray.exit_requested.connect(self.exit_app)
         self.tray.toggle_mount_requested.connect(self.handle_toggle_mount)
         self.window.closeEvent = self._on_close_event
 
-    def handle_theme_toggle(self):
-        theme = "dark" if self.config.get("theme") == "light" else "light"
-        self.config.set("theme", theme)
-        self.window._apply_styles(theme)
-        self.window.update_overview(len(self.config.get_profiles()), len(self.watchers), theme)
-        if self.is_admin:
-            self.window.set_warning_banner(
-                "관리자 권한으로 실행 중입니다. 일반 Windows 탐색기 호환을 위해 일반 권한으로 다시 실행하세요."
-            )
+    def handle_mount_all(self):
+        for profile in self.config.get_profiles():
+            if profile["id"] not in self.watchers:
+                self.handle_toggle_mount(profile["id"], True)
+
+    def handle_unmount_all(self):
+        for profile in list(self.config.get_profiles()):
+            if profile["id"] in self.watchers:
+                self.handle_toggle_mount(profile["id"], False)
 
     def _show_window(self):
         self.window.showNormal()

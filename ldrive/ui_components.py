@@ -579,7 +579,8 @@ class GlobalSettingsDialog(QDialog):
 class LDriveMainWindow(QMainWindow):
     add_requested = pyqtSignal()
     settings_requested = pyqtSignal()
-    theme_toggle_requested = pyqtSignal()
+    mount_all_requested = pyqtSignal()
+    unmount_all_requested = pyqtSignal()
 
     def __init__(self, lang="en"):
         super().__init__()
@@ -614,14 +615,17 @@ class LDriveMainWindow(QMainWindow):
         top_layout.addWidget(title)
         top_layout.addStretch()
 
-        self.theme_btn = self._make_top_action_button("theme", tr(self.lang, "theme"))
-        self.theme_btn.clicked.connect(self.theme_toggle_requested.emit)
+        self.mount_all_btn = self._make_top_action_button("play", tr(self.lang, "mount_all"))
+        self.mount_all_btn.clicked.connect(self.mount_all_requested.emit)
+        self.unmount_all_btn = self._make_top_action_button("stop", tr(self.lang, "unmount_all"))
+        self.unmount_all_btn.clicked.connect(self.unmount_all_requested.emit)
         self.settings_btn = self._make_top_action_button("settings", tr(self.lang, "settings_title"))
         self.settings_btn.clicked.connect(self.settings_requested.emit)
         self.add_btn = self._make_top_action_button("add", tr(self.lang, "add"), accent=True)
         self.add_btn.clicked.connect(self.add_requested.emit)
 
-        top_layout.addWidget(self.theme_btn)
+        top_layout.addWidget(self.mount_all_btn)
+        top_layout.addWidget(self.unmount_all_btn)
         top_layout.addWidget(self.settings_btn)
         top_layout.addWidget(self.add_btn)
         main_layout.addWidget(top_bar)
@@ -692,7 +696,7 @@ class LDriveMainWindow(QMainWindow):
             "dark": {"ghost": "#DCE8F5", "accent": "#FFFFFF"},
         }["dark" if theme_name == "dark" else "light"]
 
-        for button in (self.theme_btn, self.settings_btn, self.add_btn):
+        for button in (self.mount_all_btn, self.unmount_all_btn, self.settings_btn, self.add_btn):
             role = button.icon_role
             color = palette["accent"] if role == "accent" else palette["ghost"]
             button.setIcon(_make_line_icon(button.icon_kind, color))
