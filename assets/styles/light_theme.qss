@@ -30,8 +30,9 @@ QWidget#DriveListHost {
 
 QLabel#AppTitleHeader {
     color: #10203a;
-    font-size: 12pt;
-    font-weight: 700;
+    font-size: 13pt;
+    font-weight: 800;
+    letter-spacing: 0.3px;
 }
 
 QLabel#DialogTitle,
@@ -42,7 +43,7 @@ QLabel#EmptyTitle {
 }
 
 QLabel#CardFootnote {
-    color: #67788e;
+    color: #66788f;
 }
 
 QLabel#LetterBadge {
@@ -58,6 +59,7 @@ QLabel#CardTitle {
     color: #10203a;
     font-size: 9pt;
     font-weight: 700;
+    padding-bottom: 1px;
 }
 
 QLabel#StatusDot {
@@ -79,7 +81,7 @@ QLabel#StatusDot[state="blocked"] {
 
 QPushButton {
     border-radius: 8px;
-    padding: 4px 8px;
+    padding: 5px 10px;
     border: 1px solid transparent;
     font-weight: 600;
 }
@@ -95,9 +97,9 @@ QPushButton#DangerBtn {
 }
 
 QPushButton#GhostBtn {
-    background: rgba(247, 249, 253, 0.88);
+    background: rgba(247, 249, 253, 0.92);
     color: #203048;
-    border-color: rgba(22, 37, 65, 0.10);
+    border-color: rgba(22, 37, 65, 0.08);
 }
 
 QPushButton#GhostBtn:hover,
@@ -108,17 +110,17 @@ QPushButton#DangerBtn:hover {
 }
 
 QPushButton#GhostDangerBtn {
-    background: rgba(197, 58, 50, 0.06);
+    background: rgba(197, 58, 50, 0.05);
     color: #9e2d28;
-    border-color: rgba(197, 58, 50, 0.14);
+    border-color: rgba(197, 58, 50, 0.12);
 }
 
 QLineEdit,
 QComboBox,
 QPlainTextEdit {
-    background: rgba(251, 252, 255, 0.95);
+    background: rgba(251, 252, 255, 0.97);
     color: #18212f;
-    border: 1px solid rgba(20, 32, 51, 0.12);
+    border: 1px solid rgba(20, 32, 51, 0.10);
     border-radius: 10px;
     padding: 6px 9px;
 }
