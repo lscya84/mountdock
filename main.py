@@ -58,11 +58,13 @@ class LDriveApp:
         self.tray = LDriveTrayIcon(self.default_icon)
         self.tray.show()
         self.watchers = {}
+        self.remote_cache = []
 
         self._wire_signals()
 
         current_theme = self.config.get("theme", "light")
         self.window._apply_styles(current_theme)
+        self._refresh_remote_cache()
         self._setup_dashboards()
 
         if self.config.get("mount_on_launch"):
@@ -125,12 +127,9 @@ class LDriveApp:
                 self.config.resolve_rclone_path(data["rclone_path"]),
                 self.config.resolve_rclone_conf_path(data["rclone_conf_path"]),
             )
+            self._refresh_remote_cache()
             self.window.append_log("Settings saved.")
-            self.window.update_overview(
-                len(self.config.get_profiles()),
-                len(self.watchers),
-                self.config.get("theme", "light"),
-            )
+            self._setup_dashboards()
 
     def _setup_dashboards(self):
         self.window.clear_cards()
@@ -164,7 +163,7 @@ class LDriveApp:
         ])
 
     def handle_add_drive(self):
-        dialog = DriveSettingsDialog(self.engine.get_remotes(), self.window)
+        dialog = DriveSettingsDialog(self._get_available_remotes(), self.window)
         if dialog.exec():
             self.config.add_profile(dialog.get_data())
             self._setup_dashboards()
@@ -177,7 +176,7 @@ class LDriveApp:
             QMessageBox.warning(self.window, "Error", "Stop drive before editing.")
             return
 
-        dialog = DriveSettingsDialog(self.engine.get_remotes(), self.window, profile)
+        dialog = DriveSettingsDialog(self._get_available_remotes(), self.window, profile)
         if dialog.exec():
             self.config.update_profile(pid, dialog.get_data())
             self._setup_dashboards()
@@ -261,6 +260,25 @@ class LDriveApp:
         for profile in self.config.get_profiles():
             if profile.get("auto_mount"):
                 self.handle_toggle_mount(profile["id"], True)
+
+    def _refresh_remote_cache(self):
+        parsed = [item.get("name") for item in self.config.parse_rclone_conf(self.config.resolve_rclone_conf_path()) if item.get("name")]
+        listed = self.engine.get_remotes()
+        merged = []
+        for name in parsed + listed:
+            if name and name not in merged:
+                merged.append(name)
+        self.remote_cache = merged
+        if merged:
+            self.window.append_log(f"Loaded {len(merged)} remote(s).")
+        else:
+            self.window.append_log("No remotes found. Check rclone.exe and rclone.conf path.")
+
+    def _get_available_remotes(self):
+        if self.remote_cache:
+            return self.remote_cache
+        self._refresh_remote_cache()
+        return self.remote_cache
 
     def _acquire_single_instance(self):
         self.shared_memory = QSharedMemory("LDrive_SingleInstance")
