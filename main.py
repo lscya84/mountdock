@@ -184,7 +184,13 @@ class LDriveApp:
 
     def handle_add_drive(self):
         used_letters = [p.get("letter", "") for p in self.config.get_profiles()]
-        dialog = DriveSettingsDialog(self._get_available_remotes(), self.window, used_letters=used_letters)
+        system_used_letters = self._get_system_used_drive_letters()
+        dialog = DriveSettingsDialog(
+            self._get_available_remotes(),
+            self.window,
+            used_letters=used_letters,
+            system_used_letters=system_used_letters,
+        )
         if dialog.exec():
             self.config.add_profile(dialog.get_data())
             self._setup_dashboards()
@@ -198,7 +204,14 @@ class LDriveApp:
             return
 
         used_letters = [p.get("letter", "") for p in self.config.get_profiles()]
-        dialog = DriveSettingsDialog(self._get_available_remotes(), self.window, profile, used_letters=used_letters)
+        system_used_letters = self._get_system_used_drive_letters()
+        dialog = DriveSettingsDialog(
+            self._get_available_remotes(),
+            self.window,
+            profile,
+            used_letters=used_letters,
+            system_used_letters=system_used_letters,
+        )
         if dialog.exec():
             self.config.update_profile(pid, dialog.get_data())
             self._setup_dashboards()
@@ -378,6 +391,17 @@ class LDriveApp:
             return self.remote_cache
         self._refresh_remote_cache()
         return self.remote_cache
+
+    def _get_system_used_drive_letters(self):
+        used = set()
+        try:
+            bitmask = ctypes.windll.kernel32.GetLogicalDrives()
+            for i in range(26):
+                if bitmask & (1 << i):
+                    used.add(chr(ord('A') + i))
+        except Exception:
+            pass
+        return sorted(used)
 
     def _acquire_single_instance(self):
         self.shared_memory = QSharedMemory("LDrive_SingleInstance")
