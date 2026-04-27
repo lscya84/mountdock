@@ -1,5 +1,5 @@
 QWidget {
-    background: #f4f7fb;
+    background: #eef3f9;
     color: #18212f;
     font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
     font-size: 8.5pt;
@@ -10,16 +10,16 @@ QLabel {
 }
 
 QMainWindow, QWidget#AppShell {
-    background: #f4f7fb;
+    background: #eef3f9;
 }
 
 QFrame#HeroPanel,
 QFrame#DriveCard,
 QFrame#EmptyState,
 QDialog#SheetDialog {
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(18, 29, 52, 0.10);
-    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(18, 29, 52, 0.08);
+    border-radius: 12px;
 }
 
 QScrollArea#CardScroll,
@@ -46,9 +46,9 @@ QLabel#CardFootnote {
 }
 
 QLabel#LetterBadge {
-    background: #dcecff;
-    color: #005fb8;
-    border: 1px solid rgba(0, 95, 184, 0.14);
+    background: #d9e9ff;
+    color: #0a4ea3;
+    border: 1px solid rgba(10, 78, 163, 0.14);
     border-radius: 16px;
     font-size: 10pt;
     font-weight: 700;
@@ -85,7 +85,7 @@ QPushButton {
 }
 
 QPushButton#AccentBtn {
-    background: #0a64d8;
+    background: #0f5cc0;
     color: white;
 }
 
@@ -158,6 +158,6 @@ QCheckBox::indicator {
 }
 
 QCheckBox::indicator:checked {
-    background: #0a64d8;
-    border-color: #0a64d8;
+    background: #0f5cc0;
+    border-color: #0f5cc0;
 }
