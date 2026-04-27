@@ -3,7 +3,7 @@ import string
 import sys
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal, QThread
-from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QBrush
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -606,14 +606,31 @@ class LDriveMainWindow(QMainWindow):
 
         top_bar = QFrame()
         top_bar.setObjectName("HeroPanel")
-        top_layout = QHBoxLayout(top_bar)
-        top_layout.setContentsMargins(10, 8, 10, 8)
+        top_layout = QVBoxLayout(top_bar)
+        top_layout.setContentsMargins(12, 10, 12, 10)
         top_layout.setSpacing(8)
 
-        title = QLabel(tr(self.lang, "app_title"))
-        title.setObjectName("AppTitleHeader")
-        top_layout.addWidget(title)
-        top_layout.addStretch()
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(8)
+
+        self.brand_icon = QLabel()
+        self.brand_icon.setObjectName("BrandIcon")
+        self.brand_icon.setPixmap(self._make_brand_pixmap())
+        self.brand_icon.setFixedSize(28, 28)
+
+        self.title_label = QLabel(tr(self.lang, "app_title"))
+        self.title_label.setObjectName("AppTitleHeader")
+
+        title_row.addWidget(self.brand_icon, 0, Qt.AlignmentFlag.AlignVCenter)
+        title_row.addWidget(self.title_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        title_row.addStretch()
+        top_layout.addLayout(title_row)
+
+        action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.setSpacing(8)
+        action_row.addStretch()
 
         self.mount_all_btn = self._make_top_action_button("play", tr(self.lang, "mount_all"), accent=True)
         self.mount_all_btn.clicked.connect(self.mount_all_requested.emit)
@@ -624,10 +641,11 @@ class LDriveMainWindow(QMainWindow):
         self.add_btn = self._make_top_action_button("add", tr(self.lang, "add"), accent=True)
         self.add_btn.clicked.connect(self.add_requested.emit)
 
-        top_layout.addWidget(self.mount_all_btn)
-        top_layout.addWidget(self.unmount_all_btn)
-        top_layout.addWidget(self.settings_btn)
-        top_layout.addWidget(self.add_btn)
+        action_row.addWidget(self.mount_all_btn)
+        action_row.addWidget(self.unmount_all_btn)
+        action_row.addWidget(self.settings_btn)
+        action_row.addWidget(self.add_btn)
+        top_layout.addLayout(action_row)
         main_layout.addWidget(top_bar)
 
         self.warning_banner = QLabel("")
@@ -666,6 +684,48 @@ class LDriveMainWindow(QMainWindow):
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setMinimumHeight(30)
         return button
+
+    def _make_brand_pixmap(self, size: int = 28) -> QPixmap:
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        painter.setBrush(QColor("#D9E9FF"))
+        painter.drawEllipse(3, size - 8, size - 6, 5)
+
+        painter.setBrush(QBrush(QColor("#0F5CC0")))
+        body = QPainterPath()
+        body.moveTo(6, 18)
+        body.cubicTo(6, 11, 11, 7, 17, 7)
+        body.cubicTo(22, 7, 26, 10, 27, 15)
+        body.cubicTo(28, 15, 30, 17, 30, 19)
+        body.cubicTo(30, 22, 27, 24, 23, 24)
+        body.lineTo(13, 24)
+        body.cubicTo(9, 24, 6, 22, 6, 18)
+        painter.drawPath(body)
+
+        painter.setBrush(QColor("#0A4EA3"))
+        painter.drawEllipse(16, 5, 8, 8)
+
+        painter.setBrush(QColor("#FFFFFF"))
+        painter.drawEllipse(20, 7, 2, 2)
+
+        beak = QPainterPath()
+        beak.moveTo(23, 12)
+        beak.lineTo(28, 14)
+        beak.lineTo(23, 17)
+        beak.closeSubpath()
+        painter.setBrush(QColor("#F59F2F"))
+        painter.drawPath(beak)
+
+        painter.setBrush(QColor("#0A4EA3"))
+        painter.drawRoundedRect(8, 24, 14, 3, 1.5, 1.5)
+        painter.drawRoundedRect(12, 21, 7, 3, 1.5, 1.5)
+        painter.end()
+        return pixmap
 
     def refresh_icons(self, theme_name="light"):
         self.current_theme = theme_name
@@ -731,8 +791,10 @@ class LDriveMainWindow(QMainWindow):
         self.lang = lang
         self.setWindowTitle(tr(self.lang, "app_title"))
         self._retranslate_top_bar()
+        self.brand_icon.setPixmap(self._make_brand_pixmap())
 
     def _retranslate_top_bar(self):
+        self.title_label.setText(tr(self.lang, "app_title"))
         self.mount_all_btn.setText(tr(self.lang, "mount_all"))
         self.mount_all_btn.setToolTip(tr(self.lang, "mount_all"))
         self.unmount_all_btn.setText(tr(self.lang, "unmount_all"))

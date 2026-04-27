@@ -27,6 +27,10 @@ class LDriveApp:
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
         self.app.setApplicationName("MountDock")
+
+        icon_path = LDriveMainWindow.resource_path(os.path.join("assets", "icon.ico"))
+        if os.path.exists(icon_path):
+            self.app.setWindowIcon(QIcon(icon_path))
         self.is_admin = self._is_running_as_admin()
         self.started_from_startup = "--startup" in sys.argv
 
@@ -45,10 +49,9 @@ class LDriveApp:
         self.config.check_and_fix_startup()
         self.window = LDriveMainWindow(self.lang)
 
-        icon_path = LDriveMainWindow.resource_path(os.path.join("assets", "icon.ico"))
         self.default_icon = (
-            QIcon(icon_path)
-            if os.path.exists(icon_path)
+            self.app.windowIcon()
+            if not self.app.windowIcon().isNull()
             else self.app.style().standardIcon(QStyle.StandardPixmap.SP_DriveHDIcon)
         )
         self.window.setWindowIcon(self.default_icon)
