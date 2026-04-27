@@ -151,6 +151,11 @@ class LDriveApp:
             self.window.add_card(card)
 
         self.window.update_overview(len(profiles), active_count, self.config.get("theme", "light"))
+        self._refresh_tray_profiles(profiles)
+
+    def _refresh_tray_profiles(self, profiles=None):
+        if profiles is None:
+            profiles = self.config.get_profiles()
         self.tray.set_profiles([
             {
                 "id": p["id"],
@@ -234,6 +239,7 @@ class LDriveApp:
                     len(self.watchers),
                     self.config.get("theme", "light"),
                 )
+                self._refresh_tray_profiles()
             else:
                 self.window.append_log(f"Mount Error: {self.engine.last_error}")
                 QMessageBox.critical(self.window, "Mount Failed", f"Rclone Error:\n\n{self.engine.last_error}")
@@ -248,6 +254,7 @@ class LDriveApp:
                 len(self.watchers),
                 self.config.get("theme", "light"),
             )
+            self._refresh_tray_profiles()
 
     def _find_card(self, pid):
         for i in range(self.window.card_layout.count()):

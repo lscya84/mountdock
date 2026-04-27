@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
@@ -157,15 +158,39 @@ class DriveSettingsDialog(QDialog):
         save = QPushButton("Save")
         save.setObjectName("AccentBtn")
         save.setCursor(Qt.CursorShape.PointingHandCursor)
-        save.clicked.connect(self.accept)
+        save.clicked.connect(self._validate_and_accept)
 
         buttons.addWidget(cancel)
         buttons.addWidget(save)
         layout.addLayout(buttons)
 
+    def _validate_and_accept(self):
+        remote = self.remote_combo.currentText().strip()
+        root = self.root_edit.text().strip() or "/"
+        cache_dir = self.cache_dir_edit.text().strip()
+        extra_args = self.extra_args_edit.text().strip()
+
+        if not remote:
+            QMessageBox.warning(self, "Validation Error", "Remote is required.")
+            return
+
+        if root and not root.startswith("/"):
+            QMessageBox.warning(self, "Validation Error", "Path must start with '/'.")
+            return
+
+        if cache_dir and any(ch in cache_dir for ch in ['"', "'", "\n", "\r"]):
+            QMessageBox.warning(self, "Validation Error", "Cache dir contains invalid characters.")
+            return
+
+        if any(ch in extra_args for ch in ["\n", "\r"]):
+            QMessageBox.warning(self, "Validation Error", "Extra args must be a single line.")
+            return
+
+        self.accept()
+
     def get_data(self):
         return {
-            "remote": self.remote_combo.currentText(),
+            "remote": self.remote_combo.currentText().strip(),
             "letter": self.letter_combo.currentText().replace(":", ""),
             "volname": self.vol_edit.text().strip(),
             "root_folder": self.root_edit.text().strip() or "/",
