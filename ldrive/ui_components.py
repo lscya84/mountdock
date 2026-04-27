@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPlainTextEdit,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSystemTrayIcon,
@@ -355,6 +356,16 @@ class GlobalSettingsDialog(QDialog):
         form.addRow("config", self._build_picker_row(self.rclone_conf_edit, "file"))
         form.addRow("theme", self.theme_combo)
         layout.addLayout(form)
+
+        self.rclone_version_label = QLabel(self.config_data.get("rclone_version_status", "rclone version: unknown"))
+        self.rclone_version_label.setWordWrap(True)
+        layout.addWidget(self.rclone_version_label)
+
+        self.rclone_progress = QProgressBar()
+        self.rclone_progress.setRange(0, 100)
+        self.rclone_progress.setValue(self.config_data.get("rclone_update_progress", 0))
+        self.rclone_progress.setVisible(self.config_data.get("rclone_update_in_progress", False))
+        layout.addWidget(self.rclone_progress)
 
         self.auto_start_check = QCheckBox("Auto start")
         self.auto_start_check.setChecked(self.config_data.get("auto_start", False))

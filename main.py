@@ -61,6 +61,7 @@ class LDriveApp:
         self.tray.show()
         self.watchers = {}
         self.remote_cache = []
+        self.rclone_version_status = "rclone version: unknown"
 
         self._wire_signals()
 
@@ -117,7 +118,9 @@ class LDriveApp:
         event.accept()
 
     def handle_settings(self):
-        dialog = GlobalSettingsDialog(self.config.config, self.window)
+        settings_data = dict(self.config.config)
+        settings_data["rclone_version_status"] = self._get_rclone_version_status()
+        dialog = GlobalSettingsDialog(settings_data, self.window)
         if dialog.exec():
             data = dialog.get_data()
             if dialog.update_rclone_requested:
@@ -278,8 +281,21 @@ class LDriveApp:
 
     def _handle_rclone_update(self, data):
         try:
+            current_path = self.config.resolve_rclone_path(data.get("rclone_path", ""))
+            installed_version = self.rclone_updater.get_installed_version(current_path)
+            latest_version = self.rclone_updater.get_latest_version()
             target_dir = self.config.get_rclone_target_dir(data.get("rclone_path", ""))
-            installed = self.rclone_updater.download_and_install(target_dir)
+
+            if installed_version and not self.rclone_updater.is_update_available(installed_version, latest_version):
+                QMessageBox.information(
+                    self.window,
+                    "rclone Update",
+                    f"Already up to date.\n\nInstalled: {installed_version}\nLatest: {latest_version}",
+                )
+                return
+
+            result = self.rclone_updater.download_and_install(target_dir, latest_version)
+            installed = result["path"]
             relative_path = data.get("rclone_path", "").strip()
             if not relative_path:
                 self.config.set("rclone_path", str(installed))
@@ -287,11 +303,37 @@ class LDriveApp:
                 self.config.resolve_rclone_path(str(installed)),
                 self.config.resolve_rclone_conf_path(data.get("rclone_conf_path", "")),
             )
+
+            if result.get("locked_fallback"):
+                message = (
+                    f"rclone.exe is currently locked.\n\n"
+                    f"Downloaded new file as:\n{installed}\n\n"
+                    f"Close apps using rclone and replace the original file manually."
+                )
+            else:
+                message = f"Updated rclone to {result['version']}:\n\n{installed}"
+
             self.window.append_log(f"rclone updated: {installed}")
-            QMessageBox.information(self.window, "rclone Update", f"Updated rclone to:\n\n{installed}")
+            QMessageBox.information(self.window, "rclone Update", message)
         except Exception as exc:
             self.window.append_log(f"rclone update failed: {exc}")
             QMessageBox.critical(self.window, "rclone Update Failed", str(exc))
+
+    def _get_rclone_version_status(self):
+        current_path = self.config.resolve_rclone_path()
+        installed_version = self.rclone_updater.get_installed_version(current_path)
+        try:
+            latest_version = self.rclone_updater.get_latest_version()
+        except Exception:
+            latest_version = "unknown"
+
+        if installed_version and latest_version != "unknown":
+            if self.rclone_updater.is_update_available(installed_version, latest_version):
+                return f"rclone version: {installed_version} (update available: {latest_version})"
+            return f"rclone version: {installed_version} (latest)"
+        if installed_version:
+            return f"rclone version: {installed_version}"
+        return "rclone version: not detected"
 
     def _refresh_remote_cache(self):
         parsed = [item.get("name") for item in self.config.parse_rclone_conf(self.config.resolve_rclone_conf_path()) if item.get("name")]
