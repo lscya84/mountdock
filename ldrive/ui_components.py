@@ -231,10 +231,10 @@ class DriveCardWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setMinimumHeight(58)
+        self.setMinimumHeight(50)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(10, 6, 10, 6)
+        layout.setSpacing(10)
 
         self.status_dot = QLabel("")
         self.status_dot.setObjectName("StatusDot")
@@ -243,36 +243,32 @@ class DriveCardWidget(QFrame):
 
         self.badge = QLabel(self.profile["letter"])
         self.badge.setObjectName("LetterBadge")
-        self.badge.setFixedSize(32, 32)
+        self.badge.setFixedSize(28, 28)
         self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.badge)
+        layout.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        info_layout = QVBoxLayout()
-        info_layout.setSpacing(2)
         display_name = self.profile.get("volname") or self.profile["remote"]
-
         self.name_label = QLabel(display_name)
         self.name_label.setObjectName("CardTitle")
-        self.name_label.setWordWrap(True)
+        self.name_label.setMinimumWidth(130)
+        layout.addWidget(self.name_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        self.path_label = QLabel(f"{self.profile['letter']}:  {self.profile.get('root_folder', '/')}")
+        self.path_label = QLabel(f"{self.profile['letter']}: {self.profile.get('root_folder', '/')}")
         self.path_label.setObjectName("CardFootnote")
-
-        info_layout.addWidget(self.name_label)
-        info_layout.addWidget(self.path_label)
-        layout.addLayout(info_layout, 1)
+        self.path_label.setMinimumWidth(120)
+        layout.addWidget(self.path_label, 1, Qt.AlignmentFlag.AlignVCenter)
 
         self.toggle_btn = self._make_text_icon_button("play", tr(self.lang, "connect"), accent=True)
         self.toggle_btn.clicked.connect(self._on_toggle)
-        layout.addWidget(self.toggle_btn)
+        layout.addWidget(self.toggle_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.edit_btn = self._make_text_icon_button("edit", tr(self.lang, "edit"))
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
-        layout.addWidget(self.edit_btn)
+        layout.addWidget(self.edit_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.delete_btn = self._make_text_icon_button("trash", tr(self.lang, "delete"), danger=True)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
-        layout.addWidget(self.delete_btn)
+        layout.addWidget(self.delete_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.set_status("Disconnected")
 
