@@ -231,7 +231,7 @@ class DriveCardWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setMinimumHeight(68)
+        self.setMinimumHeight(58)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(8)
@@ -262,28 +262,35 @@ class DriveCardWidget(QFrame):
         info_layout.addWidget(self.path_label)
         layout.addLayout(info_layout, 1)
 
-        self.toggle_btn = self._make_icon_button("play", tr(self.lang, "connect"))
+        self.toggle_btn = self._make_text_icon_button("play", tr(self.lang, "connect"), accent=True)
         self.toggle_btn.clicked.connect(self._on_toggle)
         layout.addWidget(self.toggle_btn)
 
-        self.edit_btn = self._make_icon_button("edit", tr(self.lang, "edit"))
+        self.edit_btn = self._make_text_icon_button("edit", tr(self.lang, "edit"))
         self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.profile["id"]))
         layout.addWidget(self.edit_btn)
 
-        self.delete_btn = self._make_icon_button("trash", tr(self.lang, "delete"), danger=True)
+        self.delete_btn = self._make_text_icon_button("trash", tr(self.lang, "delete"), danger=True)
         self.delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.profile["id"]))
         layout.addWidget(self.delete_btn)
 
         self.set_status("Disconnected")
 
-    def _make_icon_button(self, kind, tooltip, danger=False):
-        button = QPushButton("")
+    def _make_text_icon_button(self, kind, text, danger=False, accent=False):
+        button = QPushButton(text)
         button.icon_kind = kind
-        button.icon_role = "danger" if danger else "ghost"
-        button.setObjectName("GhostDangerBtn" if danger else "GhostBtn")
-        button.setToolTip(tooltip)
+        if accent:
+            button.icon_role = "accent"
+            button.setObjectName("AccentBtn")
+        elif danger:
+            button.icon_role = "danger"
+            button.setObjectName("GhostDangerBtn")
+        else:
+            button.icon_role = "ghost"
+            button.setObjectName("GhostBtn")
+        button.setToolTip(text)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setFixedSize(28, 28)
+        button.setMinimumHeight(28)
         return button
 
     def refresh_icons(self, theme_name="light"):
@@ -327,6 +334,7 @@ class DriveCardWidget(QFrame):
             self.status_dot.setProperty("state", "idle" if status == "Disconnected" else "busy")
             self.is_running = False
 
+        self.toggle_btn.setText(tr(self.lang, "disconnect") if status == "Connected" else tr(self.lang, "connect"))
         self.toggle_btn.style().unpolish(self.toggle_btn)
         self.toggle_btn.style().polish(self.toggle_btn)
         self.status_dot.style().unpolish(self.status_dot)
@@ -613,11 +621,11 @@ class LDriveMainWindow(QMainWindow):
         top_layout.addWidget(title)
         top_layout.addStretch()
 
-        self.theme_btn = self._make_top_icon_button("theme", tr(self.lang, "theme"))
+        self.theme_btn = self._make_top_action_button("theme", tr(self.lang, "theme"))
         self.theme_btn.clicked.connect(self.theme_toggle_requested.emit)
-        self.settings_btn = self._make_top_icon_button("settings", tr(self.lang, "settings_title"))
+        self.settings_btn = self._make_top_action_button("settings", tr(self.lang, "settings_title"))
         self.settings_btn.clicked.connect(self.settings_requested.emit)
-        self.add_btn = self._make_top_icon_button("add", tr(self.lang, "drive_title"), accent=True)
+        self.add_btn = self._make_top_action_button("add", tr(self.lang, "add"), accent=True)
         self.add_btn.clicked.connect(self.add_requested.emit)
 
         top_layout.addWidget(self.theme_btn)
@@ -651,14 +659,14 @@ class LDriveMainWindow(QMainWindow):
         main_layout.addWidget(self.log_viewer)
         self.refresh_icons("light")
 
-    def _make_top_icon_button(self, kind, tooltip, accent=False):
-        button = QPushButton("")
+    def _make_top_action_button(self, kind, text, accent=False):
+        button = QPushButton(text)
         button.icon_kind = kind
         button.icon_role = "accent" if accent else "ghost"
         button.setObjectName("AccentBtn" if accent else "GhostBtn")
-        button.setToolTip(tooltip)
+        button.setToolTip(text)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setFixedSize(28, 28)
+        button.setMinimumHeight(30)
         return button
 
     def refresh_icons(self, theme_name="light"):

@@ -59,6 +59,7 @@ STRINGS = {
         "disconnect": "Disconnect",
         "edit": "Edit",
         "delete": "Delete",
+        "add": "Add",
         "no_drives": "No drives",
     },
     "ko": {
@@ -121,6 +122,7 @@ STRINGS = {
         "disconnect": "해제",
         "edit": "수정",
         "delete": "삭제",
+        "add": "추가",
         "no_drives": "등록된 드라이브가 없습니다",
     },
 }
