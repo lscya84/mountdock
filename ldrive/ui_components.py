@@ -2,7 +2,7 @@ import os
 import string
 import sys
 
-from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -325,6 +325,29 @@ class DriveCardWidget(QFrame):
         self.refresh_icons(self.current_theme)
 
 
+class RcloneUpdateWorker(QThread):
+    progress_changed = pyqtSignal(int)
+    finished_with_result = pyqtSignal(dict)
+    failed = pyqtSignal(str)
+
+    def __init__(self, updater, target_dir, version=None):
+        super().__init__()
+        self.updater = updater
+        self.target_dir = target_dir
+        self.version = version
+
+    def run(self):
+        try:
+            result = self.updater.download_and_install(
+                self.target_dir,
+                self.version,
+                progress_cb=self.progress_changed.emit,
+            )
+            self.finished_with_result.emit(result)
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
 class GlobalSettingsDialog(QDialog):
     def __init__(self, config_data, parent=None):
         super().__init__(parent)
@@ -458,6 +481,17 @@ class GlobalSettingsDialog(QDialog):
     def _request_rclone_update(self):
         self.update_rclone_requested = True
         self.accept()
+
+    def set_update_in_progress(self, in_progress: bool):
+        self.rclone_progress.setVisible(in_progress)
+        self.rclone_update_btn.setEnabled(not in_progress)
+
+    def set_update_progress(self, value: int):
+        self.rclone_progress.setVisible(True)
+        self.rclone_progress.setValue(max(0, min(100, value)))
+
+    def set_rclone_version_status(self, text: str):
+        self.rclone_version_label.setText(text)
 
     def get_data(self):
         return {
