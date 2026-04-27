@@ -326,6 +326,7 @@ class GlobalSettingsDialog(QDialog):
         self.setObjectName("SheetDialog")
         self.setWindowTitle("Settings")
         self.setFixedWidth(420)
+        self.update_rclone_requested = False
         self._init_ui()
 
     def _init_ui(self):
@@ -345,7 +346,7 @@ class GlobalSettingsDialog(QDialog):
         self.theme_combo.addItems(["light", "dark"])
         self.theme_combo.setCurrentText(self.config_data.get("theme", "light"))
 
-        form.addRow("rclone", self._build_picker_row(self.rclone_path_edit, "file"))
+        form.addRow("rclone", self._build_rclone_row())
         form.addRow("config", self._build_picker_row(self.rclone_conf_edit, "file"))
         form.addRow("theme", self.theme_combo)
         layout.addLayout(form)
@@ -381,6 +382,30 @@ class GlobalSettingsDialog(QDialog):
         layout.addLayout(buttons)
         self.refresh_icons(self.config_data.get("theme", "light"))
 
+    def _build_rclone_row(self):
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(self.rclone_path_edit, 1)
+
+        browse_button = QPushButton("")
+        browse_button.setObjectName("GhostBtn")
+        browse_button.setFixedSize(30, 30)
+        browse_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        browse_button.icon_kind = "folder"
+        browse_button.icon_role = "ghost"
+        browse_button.clicked.connect(lambda: self._browse_path(self.rclone_path_edit, "file"))
+        layout.addWidget(browse_button)
+        self.rclone_path_edit.browse_button = browse_button
+
+        self.rclone_update_btn = QPushButton("Update")
+        self.rclone_update_btn.setObjectName("GhostBtn")
+        self.rclone_update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.rclone_update_btn.clicked.connect(self._request_rclone_update)
+        layout.addWidget(self.rclone_update_btn)
+        return row
+
     def _build_picker_row(self, line_edit, mode):
         row = QWidget()
         layout = QHBoxLayout(row)
@@ -413,6 +438,10 @@ class GlobalSettingsDialog(QDialog):
         color = "#DCE8F5" if theme_name == "dark" else "#5F7087"
         for edit in (self.rclone_path_edit, self.rclone_conf_edit):
             edit.browse_button.setIcon(_make_line_icon("folder", color))
+
+    def _request_rclone_update(self):
+        self.update_rclone_requested = True
+        self.accept()
 
     def get_data(self):
         return {

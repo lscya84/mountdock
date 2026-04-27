@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
 from ldrive.config_manager import ConfigManager
 from ldrive.rclone_engine import RcloneEngine
+from ldrive.rclone_updater import RcloneUpdater
 from ldrive.ui_components import (
     DriveCardWidget,
     DriveSettingsDialog,
@@ -36,6 +37,7 @@ class LDriveApp:
             self.config.resolve_rclone_path(),
             self.config.resolve_rclone_conf_path(),
         )
+        self.rclone_updater = RcloneUpdater()
         self.config.check_and_fix_startup()
         self.window = LDriveMainWindow()
 
@@ -118,6 +120,10 @@ class LDriveApp:
         dialog = GlobalSettingsDialog(self.config.config, self.window)
         if dialog.exec():
             data = dialog.get_data()
+            if dialog.update_rclone_requested:
+                self._handle_rclone_update(data)
+                return
+
             for key, value in data.items():
                 if key == "auto_start":
                     self.config.set_auto_start(value)
@@ -267,6 +273,23 @@ class LDriveApp:
         for profile in self.config.get_profiles():
             if profile.get("auto_mount"):
                 self.handle_toggle_mount(profile["id"], True)
+
+    def _handle_rclone_update(self, data):
+        try:
+            target_dir = self.config.get_rclone_target_dir(data.get("rclone_path", ""))
+            installed = self.rclone_updater.download_and_install(target_dir)
+            relative_path = data.get("rclone_path", "").strip()
+            if not relative_path:
+                self.config.set("rclone_path", str(installed))
+            self.engine.set_paths(
+                self.config.resolve_rclone_path(str(installed)),
+                self.config.resolve_rclone_conf_path(data.get("rclone_conf_path", "")),
+            )
+            self.window.append_log(f"rclone updated: {installed}")
+            QMessageBox.information(self.window, "rclone Update", f"Updated rclone to:\n\n{installed}")
+        except Exception as exc:
+            self.window.append_log(f"rclone update failed: {exc}")
+            QMessageBox.critical(self.window, "rclone Update Failed", str(exc))
 
     def _refresh_remote_cache(self):
         parsed = [item.get("name") for item in self.config.parse_rclone_conf(self.config.resolve_rclone_conf_path()) if item.get("name")]

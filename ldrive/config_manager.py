@@ -141,6 +141,19 @@ class ConfigManager:
 
         return raw
 
+    def get_rclone_target_dir(self, value: str | None = None) -> str:
+        raw = (value if value is not None else self.config.get("rclone_path", "")).strip()
+        if raw:
+            candidate = Path(raw)
+            if candidate.suffix.lower() == ".exe":
+                if candidate.is_absolute():
+                    return str(candidate.parent)
+                return str((APP_DIR / candidate).resolve().parent)
+            if candidate.is_absolute():
+                return str(candidate)
+            return str((APP_DIR / candidate).resolve())
+        return str(APP_DIR)
+
     def resolve_rclone_conf_path(self, value: str | None = None) -> str:
         raw = (value if value is not None else self.config.get("rclone_conf_path", "")).strip()
         if not raw:
