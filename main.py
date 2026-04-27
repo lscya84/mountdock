@@ -26,7 +26,7 @@ class LDriveApp:
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
-        self.app.setApplicationName("L-Drive")
+        self.app.setApplicationName("MountDock")
         self.is_admin = self._is_running_as_admin()
         self.started_from_startup = "--startup" in sys.argv
 
@@ -34,7 +34,7 @@ class LDriveApp:
         self.lang = self.config.get("language", "en")
         self.shared_memory = None
         if self.config.get("single_instance", True) and not self._acquire_single_instance():
-            QMessageBox.information(None, "L-Drive", tr(self.lang, "already_running"))
+            QMessageBox.information(None, "MountDock", tr(self.lang, "already_running"))
             raise SystemExit(0)
 
         self.engine = RcloneEngine(
@@ -114,7 +114,7 @@ class LDriveApp:
     def _on_close_event(self, event):
         if self.config.get("minimize_to_tray", True):
             self.window.hide()
-            self.tray.showMessage("L-Drive", tr(self.lang, "tray_running"))
+            self.tray.showMessage("MountDock", tr(self.lang, "tray_running"))
             self.window.append_log(tr(self.lang, "window_hidden"))
             event.ignore()
             return

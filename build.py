@@ -20,7 +20,7 @@ def build_exe(mode: str = "onedir"):
         "--noconsole",
         "--hide-console",
         "hide-early",
-        "--name=L-Drive",
+        "--name=MountDock",
         f"--manifest={manifest_path}",
         f"--add-data=assets{DATA_SEPARATOR}assets",
         "--clean",
@@ -41,10 +41,10 @@ def build_exe(mode: str = "onedir"):
         print("\n" + "=" * 50)
         print("빌드가 완료되었습니다.")
         if mode == "onefile":
-            print("결과 파일: dist/L-Drive.exe")
+            print("결과 파일: dist/MountDock.exe")
         else:
-            print("결과 폴더: dist/L-Drive/")
-            print("포터블 권장 구성: dist/L-Drive/ 안에 rclone.exe, rclone.conf 함께 배치")
+            print("결과 폴더: dist/MountDock/")
+            print("포터블 권장 구성: dist/MountDock/ 안에 rclone.exe, rclone.conf 함께 배치")
         print("=" * 50)
     except Exception as exc:
         print(f"빌드 중 오류가 발생했습니다: {exc}")

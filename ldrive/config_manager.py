@@ -33,13 +33,13 @@ logger = logging.getLogger("ConfigManager")
 
 class ConfigManager:
     """
-    L-Drive의 다중 프로필 설정 및 Windows 시스템 통합을 관리하는 클래스입니다.
+    MountDock의 다중 프로필 설정 및 Windows 시스템 통합을 관리하는 클래스입니다.
     여러 개의 마운트 정보를 리스트 형태로 저장하고 관리합니다.
     """
 
     CONFIG_FILE = str(CONFIG_PATH)
     REG_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
-    APP_NAME = "L-Drive"
+    APP_NAME = "MountDock"
 
     def __init__(self):
         self.config = {

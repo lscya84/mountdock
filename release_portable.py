@@ -1,59 +1,59 @@
-import os
-import shutil
-import subprocess
-import sys
 from pathlib import Path
-
+import shutil
 
 ROOT = Path(__file__).resolve().parent
 DIST_DIR = ROOT / "dist"
-APP_DIR = DIST_DIR / "L-Drive"
 RELEASE_DIR = DIST_DIR / "release"
+APP_DIR = DIST_DIR / "MountDock"
 
 
-def build_onedir():
-    subprocess.run([sys.executable, "build.py", "onedir"], cwd=ROOT, check=True)
+README_TEMPLATE = ROOT / "README.md"
+
+
+def ensure_clean_dir(path: Path):
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
 
 
 def copy_if_exists(src: Path, dst: Path):
     if src.exists():
         if src.is_dir():
-            if dst.exists():
-                shutil.rmtree(dst)
-            shutil.copytree(src, dst)
+            shutil.copytree(src, dst, dirs_exist_ok=True)
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
 
 
-def package_release():
-    if RELEASE_DIR.exists():
-        shutil.rmtree(RELEASE_DIR)
+def main():
+    if not APP_DIR.exists():
+        raise SystemExit("dist/MountDock 폴더가 없습니다. 먼저 Windows에서 onedir 빌드를 실행하세요.")
+
     RELEASE_DIR.mkdir(parents=True, exist_ok=True)
+    portable_dir = RELEASE_DIR / "MountDock_Portable"
+    ensure_clean_dir(portable_dir)
 
-    portable_dir = RELEASE_DIR / "L-Drive_Portable"
-    shutil.copytree(APP_DIR, portable_dir)
+    shutil.copytree(APP_DIR, portable_dir / "MountDock", dirs_exist_ok=True)
+    copy_if_exists(README_TEMPLATE, portable_dir / "README.md")
 
-    copy_if_exists(ROOT / "README.md", portable_dir / "README.md")
-    copy_if_exists(ROOT / "requirements.txt", portable_dir / "requirements.txt")
-
-    notes = portable_dir / "PORTABLE.txt"
-    notes.write_text(
-        "L-Drive Portable\n"
-        "=================\n\n"
-        "Recommended contents in this folder:\n"
-        "- L-Drive.exe\n"
-        "- rclone.exe\n"
+    (portable_dir / "PORTABLE.txt").write_text(
+        "MountDock Portable\n"
+        "===================\n\n"
+        "Recommended contents:\n"
+        "- MountDock.exe\n"
+        "- _internal/\n"
+        "- rclone.exe (optional)\n"
         "- rclone.conf (optional)\n\n"
-        "If rclone.exe and rclone.conf are placed next to the app, L-Drive will prefer them.\n",
+        "If rclone.exe and rclone.conf are placed next to the app, MountDock will prefer them.\n",
         encoding="utf-8",
     )
 
-    archive_base = RELEASE_DIR / "L-Drive_Portable"
-    archive_path = shutil.make_archive(str(archive_base), "zip", root_dir=RELEASE_DIR, base_dir="L-Drive_Portable")
-    print(f"Created portable archive: {archive_path}")
+    archive_base = RELEASE_DIR / "MountDock_Portable"
+    archive_path = shutil.make_archive(str(archive_base), "zip", root_dir=RELEASE_DIR, base_dir="MountDock_Portable")
+
+    print(f"포터블 폴더: {portable_dir}")
+    print(f"포터블 ZIP: {archive_path}")
 
 
 if __name__ == "__main__":
-    build_onedir()
-    package_release()
+    main()
