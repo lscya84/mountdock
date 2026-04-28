@@ -34,6 +34,11 @@ def main():
     ensure_clean_dir(portable_dir)
 
     shutil.copytree(APP_DIR, portable_dir / "MountDock", dirs_exist_ok=True)
+
+    branding_dir = portable_dir / "MountDock" / "_internal" / "assets" / "branding"
+    if branding_dir.exists():
+        shutil.rmtree(branding_dir)
+
     copy_if_exists(README_TEMPLATE, portable_dir / "README.md")
 
     (portable_dir / "PORTABLE.txt").write_text(
