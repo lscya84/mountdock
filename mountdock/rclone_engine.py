@@ -161,6 +161,33 @@ class RcloneEngine:
             pass
         return True
 
+    def build_config_command(self) -> List[str]:
+        cmd = [self.rclone_path, "config"]
+        if self.rclone_conf_path:
+            cmd.extend(["--config", self.rclone_conf_path])
+        return cmd
+
+    def start_config_session(self) -> Optional[subprocess.Popen]:
+        self.last_err = ""
+        cmd = self.build_config_command()
+        try:
+            return subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=0,
+                shell=False,
+                **_hidden_subprocess_kwargs(),
+            )
+        except Exception as exc:
+            self.last_err = str(exc)
+            logger.error("rclone config 세션 시작 실패: %s", exc)
+            return None
+
     def get_remotes(self) -> List[str]:
         cmd = [self.rclone_path, "listremotes"]
         if self.rclone_conf_path:

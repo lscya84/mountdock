@@ -1,9 +1,12 @@
 import os
+import re
 import string
+import subprocess
 import sys
+import threading
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal, QThread
-from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QTextCursor
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -335,6 +338,341 @@ class DriveCardWidget(QFrame):
         self.refresh_icons(self.current_theme)
 
 
+class RcloneConfigWorker(QThread):
+    output_received = pyqtSignal(str)
+    running_changed = pyqtSignal(bool)
+    failed_to_start = pyqtSignal(str)
+    finished_with_status = pyqtSignal(int, bool)
+
+    def __init__(self, engine):
+        super().__init__()
+        self.engine = engine
+        self._lock = threading.Lock()
+        self._process = None
+        self._stop_requested = False
+
+    def run(self):
+        self._stop_requested = False
+        process = self.engine.start_config_session()
+        if not process:
+            self.failed_to_start.emit(self.engine.last_error or "Failed to start rclone config")
+            self.finished_with_status.emit(-1, False)
+            return
+
+        with self._lock:
+            self._process = process
+
+        self.running_changed.emit(True)
+        self.output_received.emit(f"$ {subprocess.list2cmdline(self.engine.build_config_command())}\n\n")
+
+        stream = process.stdout
+        pending = []
+        try:
+            while True:
+                chunk = stream.read(1) if stream is not None else ""
+                if chunk == "":
+                    if process.poll() is not None:
+                        break
+                    continue
+
+                pending.append(chunk)
+                if chunk == "\n" or len(pending) >= 80 or chunk in {":", ">", ")", "?"}:
+                    self.output_received.emit("".join(pending))
+                    pending.clear()
+        finally:
+            if pending:
+                self.output_received.emit("".join(pending))
+
+            code = process.wait()
+            with self._lock:
+                self._process = None
+            self.running_changed.emit(False)
+            self.finished_with_status.emit(code, self._stop_requested)
+
+    def send_input(self, value: str) -> bool:
+        with self._lock:
+            process = self._process
+
+        if not process or process.stdin is None or process.poll() is not None:
+            return False
+
+        try:
+            process.stdin.write(f"{value}\n")
+            process.stdin.flush()
+            return True
+        except Exception as exc:
+            self.output_received.emit(f"\n[MountDock] {exc}\n")
+            return False
+
+    def stop_session(self):
+        self._stop_requested = True
+        with self._lock:
+            process = self._process
+
+        if not process or process.poll() is not None:
+            return
+
+        try:
+            process.terminate()
+            process.wait(timeout=1)
+        except Exception:
+            try:
+                process.kill()
+            except Exception:
+                pass
+
+
+class RcloneConfigDialog(QDialog):
+    def __init__(self, engine, lang="en", parent=None):
+        super().__init__(parent)
+        self.engine = engine
+        self.lang = lang
+        self.worker = None
+        self.is_running = False
+        self.config_changed = False
+        self._restart_pending = False
+        self._close_pending = False
+        self._secret_mode = False
+        self._helper_rows = []
+        self.setObjectName("SheetDialog")
+        self.setWindowTitle(tr(self.lang, "rclone_config_title"))
+        self.resize(720, 520)
+        self._init_ui()
+        self._start_session(clear_log=True)
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+        layout.setContentsMargins(18, 18, 18, 18)
+
+        hint = QLabel(tr(self.lang, "rclone_config_hint"))
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        self.log_viewer = QPlainTextEdit()
+        self.log_viewer.setReadOnly(True)
+        self.log_viewer.setMinimumHeight(300)
+        layout.addWidget(self.log_viewer, 1)
+
+        self.helper_title = QLabel(tr(self.lang, "rclone_config_choices"))
+        layout.addWidget(self.helper_title)
+
+        self.helper_host = QWidget()
+        self.helper_layout = QVBoxLayout(self.helper_host)
+        self.helper_layout.setContentsMargins(0, 0, 0, 0)
+        self.helper_layout.setSpacing(6)
+        layout.addWidget(self.helper_host)
+
+        input_label = QLabel(tr(self.lang, "rclone_config_input"))
+        layout.addWidget(input_label)
+
+        input_row = QHBoxLayout()
+        input_row.setSpacing(8)
+        self.input_edit = QLineEdit()
+        self.input_edit.setPlaceholderText(tr(self.lang, "rclone_config_placeholder"))
+        self.input_edit.returnPressed.connect(self._send_current_input)
+        input_row.addWidget(self.input_edit, 1)
+
+        self.send_btn = QPushButton(tr(self.lang, "rclone_config_send"))
+        self.send_btn.setObjectName("AccentBtn")
+        self.send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.send_btn.clicked.connect(self._send_current_input)
+        input_row.addWidget(self.send_btn)
+        layout.addLayout(input_row)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+
+        self.restart_btn = QPushButton(tr(self.lang, "rclone_config_restart"))
+        self.restart_btn.setObjectName("GhostBtn")
+        self.restart_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.restart_btn.clicked.connect(self._restart_session)
+
+        self.close_btn = QPushButton(tr(self.lang, "rclone_config_cancel"))
+        self.close_btn.setObjectName("GhostBtn")
+        self.close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.close_btn.clicked.connect(self._handle_close)
+
+        buttons.addWidget(self.restart_btn)
+        buttons.addWidget(self.close_btn)
+        layout.addLayout(buttons)
+
+        self._set_helper_choices([])
+        self._set_running(False)
+
+    def _start_session(self, clear_log=False):
+        if clear_log:
+            self.log_viewer.clear()
+        self._set_helper_choices([])
+        self._apply_secret_mode(False)
+        self.input_edit.clear()
+        self.worker = RcloneConfigWorker(self.engine)
+        self.worker.output_received.connect(self._append_output)
+        self.worker.running_changed.connect(self._set_running)
+        self.worker.failed_to_start.connect(self._handle_failed_start)
+        self.worker.finished_with_status.connect(self._handle_session_finished)
+        self.worker.start()
+
+    def _append_output(self, text: str):
+        cursor = self.log_viewer.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self.log_viewer.setTextCursor(cursor)
+        self.log_viewer.insertPlainText(text)
+        self.log_viewer.verticalScrollBar().setValue(self.log_viewer.verticalScrollBar().maximum())
+        self._refresh_prompt_state()
+
+    def _refresh_prompt_state(self):
+        recent_text = self.log_viewer.toPlainText()[-4000:]
+        self._apply_secret_mode(self._looks_like_secret_prompt(recent_text))
+        self._set_helper_choices(self._extract_helper_choices(recent_text))
+
+    def _looks_like_secret_prompt(self, text: str) -> bool:
+        recent_lines = [line.strip() for line in text.splitlines() if line.strip()]
+        recent_tail = "\n".join(recent_lines[-6:]).lower()
+        if not recent_tail:
+            return False
+        secret_tokens = ["password", "secret", "token", "apikey", "api key", "pass phrase", "passphrase"]
+        return any(token in recent_tail for token in secret_tokens)
+
+    def _extract_helper_choices(self, text: str):
+        lines = text.splitlines()[-80:]
+        groups = []
+        current = []
+        for line in lines:
+            stripped = line.rstrip()
+            match = re.match(r"^\s*([A-Za-z0-9])\)\s+(.+?)\s*$", stripped)
+            if not match:
+                match = re.match(r"^\s*([A-Za-z0-9._-]+)\s*/\s+(.+?)\s*$", stripped)
+            if match:
+                current.append((match.group(1), match.group(2).strip()))
+                continue
+            if current and stripped.strip().startswith("\\"):
+                continue
+            if current:
+                groups.append(current)
+                current = []
+        if current:
+            groups.append(current)
+        if not groups:
+            return []
+
+        latest = []
+        seen = set()
+        for value, label in groups[-1]:
+            if value in seen:
+                continue
+            seen.add(value)
+            latest.append((value, label))
+        return latest[:8]
+
+    def _set_helper_choices(self, choices):
+        while self.helper_layout.count():
+            item = self.helper_layout.takeAt(0)
+            if item.layout():
+                while item.layout().count():
+                    child = item.layout().takeAt(0)
+                    if child.widget():
+                        child.widget().deleteLater()
+                item.layout().deleteLater()
+            elif item.widget():
+                item.widget().deleteLater()
+
+        self.helper_title.setVisible(bool(choices))
+        self.helper_host.setVisible(bool(choices))
+        if not choices:
+            return
+
+        row = None
+        for index, (value, label) in enumerate(choices):
+            if index % 3 == 0:
+                row = QHBoxLayout()
+                row.setSpacing(6)
+                self.helper_layout.addLayout(row)
+            button = QPushButton(f"{value} · {label}")
+            button.setObjectName("GhostBtn")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(lambda _checked=False, answer=value: self._apply_helper_choice(answer))
+            row.addWidget(button)
+        if row is not None:
+            row.addStretch()
+
+    def _apply_helper_choice(self, value: str):
+        self.input_edit.setText(value)
+        self._send_current_input()
+
+    def _apply_secret_mode(self, enabled: bool):
+        self._secret_mode = enabled
+        mode = QLineEdit.EchoMode.Password if enabled else QLineEdit.EchoMode.Normal
+        self.input_edit.setEchoMode(mode)
+
+    def _send_current_input(self):
+        value = self.input_edit.text()
+        if not self.worker or not self.is_running:
+            return
+        masked = "*" * max(4, len(value)) if self._secret_mode and value else value
+        if self.worker.send_input(value):
+            self.log_viewer.appendPlainText(f"> {masked}")
+            self.input_edit.clear()
+            self._refresh_prompt_state()
+
+    def _restart_session(self):
+        if self.is_running and self.worker:
+            self._restart_pending = True
+            self.worker.stop_session()
+            return
+        self._start_session(clear_log=True)
+
+    def _handle_close(self):
+        if self.is_running and self.worker:
+            self._close_pending = True
+            self.worker.stop_session()
+            return
+        self.accept()
+
+    def closeEvent(self, event):
+        if self.is_running and self.worker and not self._close_pending:
+            self._close_pending = True
+            self.worker.stop_session()
+            event.ignore()
+            return
+        super().closeEvent(event)
+
+    def _handle_failed_start(self, message: str):
+        self._append_output(tr(self.lang, "rclone_config_failed_start", message=message) + "\n")
+        QMessageBox.critical(self, tr(self.lang, "rclone_config_title"), tr(self.lang, "rclone_config_failed_start", message=message))
+
+    def _handle_session_finished(self, exit_code: int, stopped: bool):
+        self._set_running(False)
+        if exit_code == 0 and not stopped:
+            self.config_changed = True
+            self._append_output("\n" + tr(self.lang, "rclone_config_exited_ok") + "\n")
+        elif stopped:
+            self._append_output("\n" + tr(self.lang, "rclone_config_stopped") + "\n")
+        elif exit_code >= 0:
+            self._append_output("\n" + tr(self.lang, "rclone_config_exited_fail", code=exit_code) + "\n")
+
+        if self._restart_pending:
+            self._restart_pending = False
+            self._close_pending = False
+            self._start_session(clear_log=True)
+            return
+
+        if self._close_pending:
+            self._close_pending = False
+            self.accept()
+
+    def _set_running(self, running: bool):
+        self.is_running = running
+        self.input_edit.setEnabled(running)
+        self.send_btn.setEnabled(running)
+        self.close_btn.setText(tr(self.lang, "rclone_config_cancel" if running else "rclone_config_close"))
+        if running:
+            self.restart_btn.setEnabled(True)
+            self.helper_title.setText(tr(self.lang, "rclone_config_choices"))
+        else:
+            self._apply_secret_mode(False)
+
+
 class RcloneUpdateWorker(QThread):
     progress_changed = pyqtSignal(int)
     finished_with_result = pyqtSignal(dict)
@@ -425,6 +763,7 @@ class GlobalSettingsDialog(QDialog):
         self.setWindowTitle(tr(self.lang, "settings_title"))
         self.setFixedWidth(420)
         self.update_rclone_requested = False
+        self.open_rclone_config_requested = False
         self._init_ui()
 
     def _init_ui(self):
@@ -461,6 +800,12 @@ class GlobalSettingsDialog(QDialog):
         self.rclone_version_label = QLabel(self.config_data.get("rclone_version_status", tr(self.lang, "rclone_version_unknown")))
         self.rclone_version_label.setWordWrap(True)
         layout.addWidget(self.rclone_version_label)
+
+        self.rclone_config_btn = QPushButton(tr(self.lang, "rclone_config_button"))
+        self.rclone_config_btn.setObjectName("GhostBtn")
+        self.rclone_config_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.rclone_config_btn.clicked.connect(self._request_rclone_config)
+        layout.addWidget(self.rclone_config_btn)
 
         self.auto_start_check = QCheckBox(tr(self.lang, "auto_start"))
         self.auto_start_check.setChecked(self.config_data.get("auto_start", False))
@@ -554,6 +899,10 @@ class GlobalSettingsDialog(QDialog):
 
     def _request_rclone_update(self):
         self.update_rclone_requested = True
+        self.accept()
+
+    def _request_rclone_config(self):
+        self.open_rclone_config_requested = True
         self.accept()
 
     def set_rclone_version_status(self, text: str, update_available=None, tooltip=None):

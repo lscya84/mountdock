@@ -16,6 +16,7 @@ from mountdock.ui_components import (
     GlobalSettingsDialog,
     LDriveMainWindow,
     LDriveTrayIcon,
+    RcloneConfigDialog,
     RcloneUpdateDialog,
     RcloneUpdateWorker,
 )
@@ -139,6 +140,10 @@ class LDriveApp:
             if dialog.update_rclone_requested:
                 dialog.update_rclone_requested = False
                 self._handle_rclone_update(dialog, data)
+                continue
+            if dialog.open_rclone_config_requested:
+                dialog.open_rclone_config_requested = False
+                self._handle_rclone_config(data)
                 continue
 
             for key, value in data.items():
@@ -375,6 +380,21 @@ class LDriveApp:
         update_dialog.mark_failed(message)
         self._active_rclone_worker = None
 
+    def _handle_rclone_config(self, data):
+        original_rclone_path = self.engine.rclone_path
+        original_conf_path = self.engine.rclone_conf_path
+        try:
+            temp_rclone_path = self.config.resolve_rclone_path(data.get("rclone_path", ""))
+            temp_conf_path = self.config.resolve_rclone_conf_path(data.get("rclone_conf_path", ""))
+            self.engine.set_paths(temp_rclone_path, temp_conf_path)
+            dialog = RcloneConfigDialog(self.engine, self.lang, self.window)
+            dialog.exec()
+            if dialog.config_changed:
+                self._refresh_remote_cache(rclone_path=temp_rclone_path, conf_path=temp_conf_path)
+                self.window.append_log(tr(self.lang, "rclone_config_refreshed"))
+        finally:
+            self.engine.set_paths(original_rclone_path, original_conf_path)
+
     def _get_rclone_version_info(self):
         current_path = self.config.resolve_rclone_path()
         installed_version = self.rclone_updater.get_installed_version(current_path)
@@ -407,9 +427,19 @@ class LDriveApp:
             "tooltip": tr(self.lang, "tooltip_not_detected"),
         }
 
-    def _refresh_remote_cache(self):
-        parsed = [item.get("name") for item in self.config.parse_rclone_conf(self.config.resolve_rclone_conf_path()) if item.get("name")]
-        listed = self.engine.get_remotes()
+    def _refresh_remote_cache(self, rclone_path=None, conf_path=None):
+        active_rclone_path = rclone_path or self.engine.rclone_path
+        active_conf_path = conf_path if conf_path is not None else self.engine.rclone_conf_path
+        original_rclone_path = self.engine.rclone_path
+        original_conf_path = self.engine.rclone_conf_path
+
+        try:
+            self.engine.set_paths(active_rclone_path, active_conf_path)
+            parsed = [item.get("name") for item in self.config.parse_rclone_conf(active_conf_path) if item.get("name")]
+            listed = self.engine.get_remotes()
+        finally:
+            self.engine.set_paths(original_rclone_path, original_conf_path)
+
         merged = []
         for name in parsed + listed:
             if name and name not in merged:
