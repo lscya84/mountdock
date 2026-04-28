@@ -449,6 +449,10 @@ class RcloneConfigDialog(QDialog):
         hint.setWordWrap(True)
         layout.addWidget(hint)
 
+        self.status_label = QLabel(tr(self.lang, "rclone_config_status_idle"))
+        self.status_label.setWordWrap(True)
+        layout.addWidget(self.status_label)
+
         self.log_viewer = QPlainTextEdit()
         self.log_viewer.setReadOnly(True)
         self.log_viewer.setMinimumHeight(300)
@@ -531,22 +535,32 @@ class RcloneConfigDialog(QDialog):
         recent_tail = "\n".join(recent_lines[-6:]).lower()
         if not recent_tail:
             return False
-        secret_tokens = ["password", "secret", "token", "apikey", "api key", "pass phrase", "passphrase"]
+        secret_tokens = [
+            "password",
+            "secret",
+            "token",
+            "apikey",
+            "api key",
+            "pass phrase",
+            "passphrase",
+            "client_secret",
+            "access key",
+        ]
         return any(token in recent_tail for token in secret_tokens)
 
     def _extract_helper_choices(self, text: str):
-        lines = text.splitlines()[-80:]
+        lines = text.splitlines()[-120:]
         groups = []
         current = []
         for line in lines:
             stripped = line.rstrip()
-            match = re.match(r"^\s*([A-Za-z0-9])\)\s+(.+?)\s*$", stripped)
+            match = re.match(r"^\s*([A-Za-z0-9._-]+)\)\s+(.+?)\s*$", stripped)
             if not match:
                 match = re.match(r"^\s*([A-Za-z0-9._-]+)\s*/\s+(.+?)\s*$", stripped)
             if match:
-                current.append((match.group(1), match.group(2).strip()))
+                current.append((match.group(1), self._normalize_choice_label(match.group(2))))
                 continue
-            if current and stripped.strip().startswith("\\"):
+            if current and (stripped.startswith(" ") or stripped.startswith("\t")):
                 continue
             if current:
                 groups.append(current)
@@ -559,11 +573,17 @@ class RcloneConfigDialog(QDialog):
         latest = []
         seen = set()
         for value, label in groups[-1]:
-            if value in seen:
+            normalized_value = value.strip()
+            if normalized_value in seen:
                 continue
-            seen.add(value)
-            latest.append((value, label))
-        return latest[:8]
+            seen.add(normalized_value)
+            latest.append((normalized_value, label))
+        return latest[:12]
+
+    def _normalize_choice_label(self, label: str) -> str:
+        normalized = re.sub(r"\s+", " ", label).strip()
+        normalized = re.sub(r"\s*\([^)]*default[^)]*\)", "", normalized, flags=re.IGNORECASE).strip()
+        return normalized or label.strip()
 
     def _set_helper_choices(self, choices):
         while self.helper_layout.count():
@@ -577,9 +597,12 @@ class RcloneConfigDialog(QDialog):
             elif item.widget():
                 item.widget().deleteLater()
 
-        self.helper_title.setVisible(bool(choices))
-        self.helper_host.setVisible(bool(choices))
+        self.helper_title.setVisible(True)
+        self.helper_host.setVisible(True)
         if not choices:
+            empty_label = QLabel(tr(self.lang, "rclone_config_no_choices"))
+            empty_label.setWordWrap(True)
+            self.helper_layout.addWidget(empty_label)
             return
 
         row = None
@@ -604,6 +627,12 @@ class RcloneConfigDialog(QDialog):
         self._secret_mode = enabled
         mode = QLineEdit.EchoMode.Password if enabled else QLineEdit.EchoMode.Normal
         self.input_edit.setEchoMode(mode)
+        self.input_edit.setPlaceholderText(
+            tr(self.lang, "rclone_config_placeholder_secret") if enabled else tr(self.lang, "rclone_config_placeholder")
+        )
+        self.status_label.setText(
+            tr(self.lang, "rclone_config_status_secret") if enabled else (tr(self.lang, "rclone_config_running") if self.is_running else tr(self.lang, "rclone_config_status_idle"))
+        )
 
     def _send_current_input(self):
         value = self.input_edit.text()
@@ -645,11 +674,17 @@ class RcloneConfigDialog(QDialog):
         self._set_running(False)
         if exit_code == 0 and not stopped:
             self.config_changed = True
-            self._append_output("\n" + tr(self.lang, "rclone_config_exited_ok") + "\n")
+            message = tr(self.lang, "rclone_config_exited_ok")
+            self.status_label.setText(message)
+            self._append_output("\n" + message + "\n")
         elif stopped:
-            self._append_output("\n" + tr(self.lang, "rclone_config_stopped") + "\n")
+            message = tr(self.lang, "rclone_config_stopped")
+            self.status_label.setText(message)
+            self._append_output("\n" + message + "\n")
         elif exit_code >= 0:
-            self._append_output("\n" + tr(self.lang, "rclone_config_exited_fail", code=exit_code) + "\n")
+            message = tr(self.lang, "rclone_config_exited_fail", code=exit_code)
+            self.status_label.setText(message)
+            self._append_output("\n" + message + "\n")
 
         if self._restart_pending:
             self._restart_pending = False
@@ -665,11 +700,13 @@ class RcloneConfigDialog(QDialog):
         self.is_running = running
         self.input_edit.setEnabled(running)
         self.send_btn.setEnabled(running)
+        self.restart_btn.setEnabled(True)
         self.close_btn.setText(tr(self.lang, "rclone_config_cancel" if running else "rclone_config_close"))
         if running:
-            self.restart_btn.setEnabled(True)
+            self.status_label.setText(tr(self.lang, "rclone_config_running"))
             self.helper_title.setText(tr(self.lang, "rclone_config_choices"))
         else:
+            self.status_label.setText(tr(self.lang, "rclone_config_status_idle"))
             self._apply_secret_mode(False)
 
 
