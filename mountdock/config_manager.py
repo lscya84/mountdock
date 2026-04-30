@@ -188,6 +188,7 @@ class ConfigManager:
 
     def find_default_rclone_conf(self) -> Path | None:
         for candidate in [
+            Path(self.get_rclone_conf_store_path()),
             APP_DIR / "rclone.conf",
             Path(os.environ.get("APPDATA", "")) / "rclone" / "rclone.conf",
             Path.home() / ".config" / "rclone" / "rclone.conf",
@@ -195,6 +196,29 @@ class ConfigManager:
             if candidate.exists():
                 return candidate
         return None
+
+    def get_rclone_conf_store_path(self) -> str:
+        return str((APP_DIR / ".mountdock" / "rclone.conf").resolve())
+
+    def import_rclone_conf(self, source_path: str) -> str:
+        raw = (source_path or "").strip()
+        if not raw:
+            return ""
+
+        source = Path(raw)
+        if not source.is_absolute():
+            source = Path(self.resolve_rclone_conf_path(raw))
+        if not source.exists():
+            raise FileNotFoundError(f"rclone.conf file not found: {source}")
+
+        destination = Path(self.get_rclone_conf_store_path())
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
+        relative = os.path.relpath(destination, APP_DIR)
+        self.config["rclone_conf_path"] = relative
+        self.save_config()
+        return str(destination)
 
     def resolve_app_relative_path(self, raw_path: str | None) -> str:
         raw = (raw_path or "").strip()

@@ -120,8 +120,8 @@ class SyncService:
         )
         self._update_account_metadata(creds)
 
-        if not self.config.get("rclone_conf_path"):
-            self.config.set("rclone_conf_path", str(destination))
+        relative = os.path.relpath(destination, get_runtime_app_dir())
+        self.config.set("rclone_conf_path", relative)
 
         return {
             "restored_to": str(destination),
@@ -143,6 +143,10 @@ class SyncService:
         return self.get_restore_target_path()
 
     def get_restore_target_path(self) -> Path:
+        managed_path = self.config.get_rclone_conf_store_path()
+        if managed_path:
+            return Path(managed_path).resolve()
+
         configured = (self.config.get("rclone_conf_path", "") or "").strip()
         if configured:
             raw = Path(configured)
@@ -151,16 +155,7 @@ class SyncService:
             return (get_runtime_app_dir() / raw).resolve()
 
         app_dir_candidate = get_runtime_app_dir() / "rclone.conf"
-        appdata = os.environ.get("APPDATA", "").strip()
-        appdata_candidate = Path(appdata) / DEFAULT_APPDATA_SUBDIR if appdata else None
-
-        for candidate in [app_dir_candidate, appdata_candidate]:
-            if candidate and candidate.exists():
-                return candidate.resolve()
-
-        if appdata_candidate:
-            return appdata_candidate
-        return app_dir_candidate
+        return app_dir_candidate.resolve()
 
     def _find_default_conf_candidates(self, existing_only: bool) -> list[Path]:
         app_dir_candidate = get_runtime_app_dir() / "rclone.conf"

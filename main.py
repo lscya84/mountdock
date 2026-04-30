@@ -156,6 +156,12 @@ class LDriveApp:
                 self._handle_google_sync_dialog(dialog, data)
                 continue
 
+            try:
+                self._persist_rclone_conf(data)
+            except Exception as exc:
+                QMessageBox.warning(self.window, tr(self.lang, "error"), str(exc))
+                continue
+
             self._apply_settings_data(data, refresh_remotes=True)
             self.window.append_log(tr(self.lang, "settings_saved"))
             self._setup_dashboards()
@@ -201,6 +207,26 @@ class LDriveApp:
         relative = os.path.relpath(imported, self.config.get_app_dir())
         data["google_client_secret_path"] = relative
         self.window.append_log(f"Imported Google OAuth client JSON to {imported}")
+        return imported
+
+    def _persist_rclone_conf(self, data) -> str:
+        raw = (data.get("rclone_conf_path", "") or "").strip()
+        if not raw:
+            return self.config.resolve_rclone_conf_path()
+
+        managed = Path(self.config.get_rclone_conf_store_path()).resolve()
+        resolved = Path(self.config.resolve_rclone_conf_path(raw)).resolve()
+
+        if resolved == managed and managed.exists():
+            relative = os.path.relpath(managed, self.config.get_app_dir())
+            data["rclone_conf_path"] = relative
+            self.config.set("rclone_conf_path", relative)
+            return str(managed)
+
+        imported = self.config.import_rclone_conf(str(resolved))
+        relative = os.path.relpath(imported, self.config.get_app_dir())
+        data["rclone_conf_path"] = relative
+        self.window.append_log(f"Imported rclone.conf to {imported}")
         return imported
 
     def _handle_passphrase_cache(self, service: SyncService, remember: bool, passphrase: str):
