@@ -5,6 +5,7 @@ import os
 import psutil
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from mountdock.i18n import tr
 from mountdock.rclone_engine import RcloneEngine
 
 logger = logging.getLogger("Watcher")
@@ -27,6 +28,7 @@ class LDriveWatcher(QThread):
         custom_args: str = "",
         volname: str = "",
         cache_dir: str = "",
+        lang: str = "en",
     ):
         super().__init__()
         self.engine = engine
@@ -37,6 +39,7 @@ class LDriveWatcher(QThread):
         self.custom_args = custom_args
         self.volname = volname
         self.cache_dir = cache_dir
+        self.lang = lang
         self.is_running = True
         self.drive_path = f"{self.drive_letter}:\\"
 
@@ -53,7 +56,7 @@ class LDriveWatcher(QThread):
                 self.status_changed.emit("Connected")
                 self.msleep(5000)
             else:
-                self.log_emitted.emit(f"[Watcher] Drive {self.drive_letter}: connection lost. Retrying.")
+                self.log_emitted.emit(tr(self.lang, "log_watcher_connection_lost", drive=self.drive_letter))
                 self._handle_reconnect()
 
     def _strict_wait_for_mount(self, timeout: int = 45) -> bool:
@@ -63,12 +66,16 @@ class LDriveWatcher(QThread):
 
             if not self.engine.is_process_alive(self.drive_letter):
                 err = self.engine.last_error
-                message = f"[Error] Mount failed: {err[:500]}" if err else "[Error] Rclone process exited unexpectedly."
+                message = (
+                    tr(self.lang, "log_mount_failed", message=err[:500])
+                    if err
+                    else tr(self.lang, "log_rclone_exited")
+                )
                 self.log_emitted.emit(message)
                 return False
 
             if self._check_drive_ready():
-                self.log_emitted.emit(f"[Success] Drive {self.drive_letter}: mounted.")
+                self.log_emitted.emit(tr(self.lang, "log_drive_mounted", drive=self.drive_letter))
                 self.status_changed.emit("Connected")
                 return True
 
@@ -76,8 +83,13 @@ class LDriveWatcher(QThread):
             self.msleep(1000)
 
         self.log_emitted.emit(
-            f"[Timeout] Drive {self.drive_letter}: mount point did not become accessible. "
-            f"drive_type={self._get_drive_type()} exists={self._check_drive_exists()}"
+            tr(
+                self.lang,
+                "log_mount_timeout",
+                drive=self.drive_letter,
+                drive_type=self._get_drive_type(),
+                exists=self._check_drive_exists(),
+            )
         )
         return False
 

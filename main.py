@@ -559,6 +559,7 @@ class LDriveApp:
                     profile.get("custom_args", profile.get("extra_flags", "")),
                     profile.get("volname", ""),
                     profile.get("cache_dir", ""),
+                    self.lang,
                 )
                 watcher.status_changed.connect(card.set_status)
                 watcher.log_emitted.connect(self.window.append_log)

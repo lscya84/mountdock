@@ -147,6 +147,11 @@ STRINGS = {
         "google_sync_cache_cleared": "Saved passphrase removed from this device.",
         "google_restore_confirm_title": "Confirm Restore",
         "google_restore_confirm": "Restore encrypted rclone.conf to:\n\n{path}\n\nIf a file already exists, MountDock will create a timestamped backup before replacing it.",
+        "log_watcher_connection_lost": "[Watcher] Drive {drive}: connection lost. Retrying.",
+        "log_mount_failed": "[Error] Mount failed: {message}",
+        "log_rclone_exited": "[Error] Rclone process exited unexpectedly.",
+        "log_drive_mounted": "[Success] Drive {drive}: mounted.",
+        "log_mount_timeout": "[Timeout] Drive {drive}: mount point did not become accessible. drive_type={drive_type} exists={exists}",
     },
     "ko": {
         "app_title": "MountDock",
@@ -296,6 +301,11 @@ STRINGS = {
         "google_sync_cache_cleared": "이 기기에 저장된 패스프레이즈를 삭제했습니다.",
         "google_restore_confirm_title": "복원 확인",
         "google_restore_confirm": "암호화된 rclone.conf를 아래 경로로 복원합니다:\n\n{path}\n\n기존 파일이 있으면 MountDock이 먼저 시각이 포함된 백업 파일을 만든 뒤 교체합니다.",
+        "log_watcher_connection_lost": "[감시] 드라이브 {drive}: 연결이 끊어졌습니다. 다시 시도합니다.",
+        "log_mount_failed": "[오류] 마운트 실패: {message}",
+        "log_rclone_exited": "[오류] rclone 프로세스가 예기치 않게 종료되었습니다.",
+        "log_drive_mounted": "[성공] 드라이브 {drive}: 마운트되었습니다.",
+        "log_mount_timeout": "[시간초과] 드라이브 {drive}: 마운트 지점에 접근할 수 없었습니다. drive_type={drive_type} exists={exists}",
     },
 }
 
