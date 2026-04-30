@@ -1,19 +1,22 @@
 import os
 import shutil
 import sys
-
-import PyInstaller.__main__
+import argparse
+from pathlib import Path
 
 
 DATA_SEPARATOR = ";" if os.name == "nt" else ":"
+ROOT = Path(__file__).resolve().parent
 
 
 def build_exe(mode: str = "onedir"):
+    import PyInstaller.__main__
+
     print(f"빌드를 시작합니다. mode={mode}")
 
-    entry_point = "main.py"
-    icon_path = os.path.join("assets", "icon.ico")
-    manifest_path = os.path.join("assets", "app.manifest")
+    entry_point = str(ROOT / "main.py")
+    icon_path = ROOT / "assets" / "icon.ico"
+    manifest_path = ROOT / "assets" / "app.manifest"
 
     params = [
         entry_point,
@@ -22,10 +25,10 @@ def build_exe(mode: str = "onedir"):
         "hide-early",
         "--name=MountDock",
         f"--manifest={manifest_path}",
-        f"--add-data=assets{DATA_SEPARATOR}assets",
+        f"--add-data={ROOT / 'assets'}{DATA_SEPARATOR}assets",
         "--clean",
-        "--workpath=build",
-        "--distpath=dist",
+        f"--workpath={ROOT / 'build'}",
+        f"--distpath={ROOT / 'dist'}",
     ]
 
     if mode == "onefile":
@@ -33,7 +36,7 @@ def build_exe(mode: str = "onedir"):
     else:
         params.append("--onedir")
 
-    if os.path.exists(icon_path):
+    if icon_path.exists():
         params.append(f"--icon={icon_path}")
 
     try:
@@ -51,9 +54,12 @@ def build_exe(mode: str = "onedir"):
 
 
 if __name__ == "__main__":
-    mode = "onedir"
-    if len(sys.argv) > 1 and sys.argv[1] in {"onefile", "onedir"}:
-        mode = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Build MountDock with PyInstaller")
+    parser.add_argument("mode_arg", nargs="?", choices=["onefile", "onedir"], help="build mode")
+    parser.add_argument("--mode", dest="mode_flag", choices=["onefile", "onedir"], help="build mode")
+    args = parser.parse_args()
+
+    mode = args.mode_flag or args.mode_arg or "onedir"
 
     for folder in ["build", "dist"]:
         if os.path.exists(folder):

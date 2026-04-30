@@ -75,13 +75,20 @@ dist/MountDock/
 ```bash
 python build.py --mode onedir
 python release_portable.py
+python release_installer.py
 ```
 
-포터블 출력 / Portable output:
+출력물 / Release outputs:
 
 ```text
 dist/release/MountDock_Portable.zip
+dist/release/MountDock-Setup-vX.Y.Z.exe
 ```
+
+권장 릴리즈 구성 / Recommended release set:
+
+- `MountDock-Setup-vX.Y.Z.exe` → 일반 사용자용 설치형
+- `MountDock_Portable.zip` → 고급 사용자/테스트용 포터블 onedir
 
 ---
 
@@ -212,13 +219,22 @@ Install dependencies into the virtual environment first.
 ```powershell
 python build.py --mode onedir
 python release_portable.py
+python release_installer.py
 ```
+
+설치형 빌드 메모 / Installer build notes:
+
+- `release_installer.py`는 **Windows에서** 실행해야 합니다.
+- 사전에 **Inno Setup 6**가 설치되어 있어야 합니다.
+- 기본 설치 경로는 사용자 기준 `LocalAppData\Programs\MountDock` 입니다.
+- 설치형은 내부적으로 onedir 결과물을 감싼 형태이므로, 실행 안정성과 배포 편의성을 함께 가져갑니다.
 
 ---
 
 ## 릴리즈 체크리스트 / Release Checklist
 
 - [ ] **KR** Windows에서 빌드 확인 / **EN** Confirm build on Windows
+- [ ] **KR** 설치형 EXE 생성 확인 / **EN** Verify installer EXE generation
 - [ ] **KR** 트레이 동작 확인 / **EN** Verify tray behavior
 - [ ] **KR** 시작 시 자동 마운트 확인 / **EN** Verify auto-mount on launch
 - [ ] **KR** 모두 연결 / 모두 해제 동작 확인 / **EN** Verify bulk mount / unmount actions
@@ -232,6 +248,7 @@ python release_portable.py
 - [ ] **KR** 다른 경로에 기존 `rclone.conf`가 있을 때 백업 후 복원 확인 / **EN** Verify restore creates a backup when local `rclone.conf` already exists
 - [ ] **KR** “이 기기에서 기억” 체크 후 재복원 시 저장된 패스프레이즈 사용 확인 / **EN** Verify remembered-on-device passphrase is reused on later restore
 - [ ] **KR** 로그아웃 시 로컬 저장 패스프레이즈 정리 확인 / **EN** Verify sign-out clears the locally saved passphrase
+- [ ] **KR** 설치형 제거 후 재설치 흐름 확인 / **EN** Verify uninstall and reinstall flow for installer build
 
 ---
 
