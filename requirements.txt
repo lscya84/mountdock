@@ -2,3 +2,8 @@ PyQt6
 psutil
 requests
 pyinstaller
+cryptography
+argon2-cffi
+google-auth
+google-auth-oauthlib
+google-api-python-client
