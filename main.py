@@ -183,6 +183,26 @@ class LDriveApp:
         auth_manager = GoogleAuthManager(secret_path, token_path)
         return SyncService(self.config, auth_manager)
 
+    def _persist_google_client_secret(self, data) -> str:
+        raw = (data.get("google_client_secret_path", "") or "").strip()
+        if not raw:
+            return self.config.resolve_google_client_secret_path()
+
+        managed = Path(self.config.get_google_client_secret_store_path()).resolve()
+        resolved = Path(self.config.resolve_google_client_secret_path(raw)).resolve()
+
+        if resolved == managed and managed.exists():
+            relative = os.path.relpath(managed, self.config.get_app_dir())
+            data["google_client_secret_path"] = relative
+            self.config.set("google_client_secret_path", relative)
+            return str(managed)
+
+        imported = self.config.import_google_client_secret(str(resolved))
+        relative = os.path.relpath(imported, self.config.get_app_dir())
+        data["google_client_secret_path"] = relative
+        self.window.append_log(f"Imported Google OAuth client JSON to {imported}")
+        return imported
+
     def _handle_passphrase_cache(self, service: SyncService, remember: bool, passphrase: str):
         if remember:
             service.cache_passphrase(passphrase)
@@ -226,7 +246,10 @@ class LDriveApp:
         if not raw:
             QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
             return False
-        resolved = self.config.resolve_google_client_secret_path(raw)
+        try:
+            resolved = self._persist_google_client_secret(data)
+        except Exception:
+            resolved = self.config.resolve_google_client_secret_path(raw)
         if not resolved or not Path(resolved).exists():
             QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_secret_missing"))
             return False
@@ -249,6 +272,14 @@ class LDriveApp:
         dialog.on_google_check_backup = lambda: self._handle_google_check_backup(dialog, merged_data())
 
         dialog.exec()
+        final_data = merged_data()
+        raw_secret = (final_data.get("google_client_secret_path", "") or "").strip()
+        if raw_secret:
+            try:
+                self._persist_google_client_secret(final_data)
+                self._apply_settings_data(final_data, refresh_remotes=False)
+            except Exception as exc:
+                QMessageBox.warning(self.window, tr(self.lang, "google_sync"), str(exc))
         self._update_google_sync_dialog_state(settings_dialog)
 
     def _handle_google_sign_in(self, dialog: GlobalSettingsDialog, data):
