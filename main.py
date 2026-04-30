@@ -237,35 +237,19 @@ class LDriveApp:
         sync_data = dict(self.config.config)
         dialog = GoogleSyncDialog(sync_data, self.lang, self.window)
         self._update_google_sync_dialog_state(dialog)
-        while True:
-            if not dialog.exec():
-                self._update_google_sync_dialog_state(settings_dialog)
-                return
-            sync_values = dialog.get_data()
-            merged = dict(data)
-            merged.update(sync_values)
-            if dialog.google_sign_in_requested:
-                dialog.google_sign_in_requested = False
-                self._handle_google_sign_in(dialog, merged)
-                continue
-            if dialog.google_sign_out_requested:
-                dialog.google_sign_out_requested = False
-                self._handle_google_sign_out(dialog, merged)
-                continue
-            if dialog.google_backup_requested:
-                dialog.google_backup_requested = False
-                self._handle_google_backup(dialog, merged)
-                continue
-            if dialog.google_restore_requested:
-                dialog.google_restore_requested = False
-                self._handle_google_restore(dialog, merged)
-                continue
-            if dialog.google_check_backup_requested:
-                dialog.google_check_backup_requested = False
-                self._handle_google_check_backup(dialog, merged)
-                continue
-            self._update_google_sync_dialog_state(settings_dialog)
-            return
+        def merged_data():
+            values = dict(data)
+            values.update(dialog.get_data())
+            return values
+
+        dialog.on_google_sign_in = lambda: self._handle_google_sign_in(dialog, merged_data())
+        dialog.on_google_sign_out = lambda: self._handle_google_sign_out(dialog, merged_data())
+        dialog.on_google_backup = lambda: self._handle_google_backup(dialog, merged_data())
+        dialog.on_google_restore = lambda: self._handle_google_restore(dialog, merged_data())
+        dialog.on_google_check_backup = lambda: self._handle_google_check_backup(dialog, merged_data())
+
+        dialog.exec()
+        self._update_google_sync_dialog_state(settings_dialog)
 
     def _handle_google_sign_in(self, dialog: GlobalSettingsDialog, data):
         if not self._validate_google_client_secret(data):

@@ -881,6 +881,11 @@ class GoogleSyncDialog(QDialog):
         self.google_backup_requested = False
         self.google_restore_requested = False
         self.google_check_backup_requested = False
+        self.on_google_sign_in = None
+        self.on_google_sign_out = None
+        self.on_google_backup = None
+        self.on_google_restore = None
+        self.on_google_check_backup = None
         self._init_ui()
 
     def _init_ui(self):
@@ -1008,24 +1013,24 @@ class GoogleSyncDialog(QDialog):
         self.google_client_secret_edit.browse_button.setIcon(_make_line_icon("folder", color))
 
     def _request_google_sign_in(self):
-        self.google_sign_in_requested = True
-        self.accept()
+        if callable(self.on_google_sign_in):
+            self.on_google_sign_in()
 
     def _request_google_sign_out(self):
-        self.google_sign_out_requested = True
-        self.accept()
+        if callable(self.on_google_sign_out):
+            self.on_google_sign_out()
 
     def _request_google_backup(self):
-        self.google_backup_requested = True
-        self.accept()
+        if callable(self.on_google_backup):
+            self.on_google_backup()
 
     def _request_google_restore(self):
-        self.google_restore_requested = True
-        self.accept()
+        if callable(self.on_google_restore):
+            self.on_google_restore()
 
     def _request_google_check_backup(self):
-        self.google_check_backup_requested = True
-        self.accept()
+        if callable(self.on_google_check_backup):
+            self.on_google_check_backup()
 
     def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None, signed_in: bool | None = None):
         effective_signed_in = bool(str(email).strip()) if signed_in is None else bool(signed_in)
