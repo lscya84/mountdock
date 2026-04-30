@@ -137,6 +137,17 @@ MountDock은 Google Drive `appDataFolder`를 이용해 `rclone.conf`를 **암호
 - Drive에는 평문 `rclone.conf`를 저장하지 않습니다
 - 기존 로컬 `rclone.conf`가 있으면 복원 전에 `.bak-YYYYMMDD-HHMMSS` 백업을 만듭니다
 
+Google OAuth 설정 메모:
+- Google Cloud에서 **Desktop app** 유형 OAuth client를 생성하는 것이 가장 간단합니다
+- Google Drive API를 활성화해야 합니다
+- MountDock 설정에서 해당 **client secret JSON** 파일을 선택해야 합니다
+- 토큰은 앱 로컬 경로에 캐시되며, 설정창에서 토큰 캐시 경로를 확인할 수 있습니다
+
+문제 해결:
+- 로그인 버튼을 눌렀는데 바로 실패하면 client JSON 경로가 실제로 존재하는지 먼저 확인하세요
+- 백업 전에는 **백업 확인** 버튼으로 현재 계정의 암호화 백업 존재 여부를 확인할 수 있습니다
+- 복원 시 기존 `rclone.conf`가 있으면 자동 백업 파일이 생성됩니다
+
 **EN**  
 MountDock can back up and restore `rclone.conf` in **encrypted form** using Google Drive `appDataFolder`.
 
@@ -164,6 +175,17 @@ Security notes:
 - decryption still requires the passphrase
 - plaintext `rclone.conf` is not stored in Drive
 - if a local `rclone.conf` already exists, MountDock creates a `.bak-YYYYMMDD-HHMMSS` backup before restoring
+
+Google OAuth setup notes:
+- the simplest option is to create a **Desktop app** OAuth client in Google Cloud
+- the Google Drive API must be enabled for that project
+- in MountDock Settings, select the downloaded **client secret JSON** file
+- tokens are cached locally by the app, and the token cache path is shown in Settings
+
+Troubleshooting:
+- if sign-in fails immediately, first check that the selected client JSON path actually exists
+- before restoring, you can use **Check backup** to see whether an encrypted backup exists for the current Google account
+- when restoring over an existing `rclone.conf`, MountDock creates a local backup automatically
 
 ---
 
