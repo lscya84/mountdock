@@ -17,6 +17,7 @@ from mountdock.ui_components import (
     DriveCardWidget,
     DriveSettingsDialog,
     GlobalSettingsDialog,
+    GoogleSyncDialog,
     LDriveMainWindow,
     LDriveTrayIcon,
     PassphraseDialog,
@@ -149,25 +150,9 @@ class LDriveApp:
                 dialog.open_rclone_config_requested = False
                 self._handle_rclone_config(data)
                 continue
-            if dialog.google_sign_in_requested:
-                dialog.google_sign_in_requested = False
-                self._handle_google_sign_in(dialog, data)
-                continue
-            if dialog.google_sign_out_requested:
-                dialog.google_sign_out_requested = False
-                self._handle_google_sign_out(dialog, data)
-                continue
-            if dialog.google_backup_requested:
-                dialog.google_backup_requested = False
-                self._handle_google_backup(dialog, data)
-                continue
-            if dialog.google_restore_requested:
-                dialog.google_restore_requested = False
-                self._handle_google_restore(dialog, data)
-                continue
-            if dialog.google_check_backup_requested:
-                dialog.google_check_backup_requested = False
-                self._handle_google_check_backup(dialog, data)
+            if dialog.open_google_sync_requested:
+                dialog.open_google_sync_requested = False
+                self._handle_google_sync_dialog(dialog, data)
                 continue
 
             self._apply_settings_data(data, refresh_remotes=True)
@@ -238,6 +223,41 @@ class LDriveApp:
             QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_secret_missing"))
             return False
         return True
+
+    def _handle_google_sync_dialog(self, settings_dialog: GlobalSettingsDialog, data):
+        self._apply_settings_data(data, refresh_remotes=False)
+        sync_data = dict(self.config.config)
+        dialog = GoogleSyncDialog(sync_data, self.lang, self.window)
+        self._update_google_sync_dialog_state(dialog)
+        while True:
+            if not dialog.exec():
+                self._update_google_sync_dialog_state(settings_dialog)
+                return
+            sync_values = dialog.get_data()
+            merged = dict(data)
+            merged.update(sync_values)
+            if dialog.google_sign_in_requested:
+                dialog.google_sign_in_requested = False
+                self._handle_google_sign_in(dialog, merged)
+                continue
+            if dialog.google_sign_out_requested:
+                dialog.google_sign_out_requested = False
+                self._handle_google_sign_out(dialog, merged)
+                continue
+            if dialog.google_backup_requested:
+                dialog.google_backup_requested = False
+                self._handle_google_backup(dialog, merged)
+                continue
+            if dialog.google_restore_requested:
+                dialog.google_restore_requested = False
+                self._handle_google_restore(dialog, merged)
+                continue
+            if dialog.google_check_backup_requested:
+                dialog.google_check_backup_requested = False
+                self._handle_google_check_backup(dialog, merged)
+                continue
+            self._update_google_sync_dialog_state(settings_dialog)
+            return
 
     def _handle_google_sign_in(self, dialog: GlobalSettingsDialog, data):
         if not self._validate_google_client_secret(data):
