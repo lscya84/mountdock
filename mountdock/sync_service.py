@@ -9,7 +9,8 @@ from typing import Any
 
 from mountdock.crypto_utils import decrypt_rclone_conf, encrypt_rclone_conf
 from mountdock.google_auth import GoogleAuthError, GoogleAuthManager
-from mountdock.google_drive_sync import DEFAULT_FILE_NAME, GoogleDriveSync, GoogleDriveSyncError
+from mountdock.google_drive_sync import GoogleDriveSync, GoogleDriveSyncError
+from mountdock.secure_store import SecureStore, SecureStoreError
 
 
 DEFAULT_APPDATA_SUBDIR = Path("rclone") / "rclone.conf"
@@ -26,9 +27,10 @@ def get_runtime_app_dir() -> Path:
 
 
 class SyncService:
-    def __init__(self, config_manager: Any, auth_manager: GoogleAuthManager):
+    def __init__(self, config_manager: Any, auth_manager: GoogleAuthManager, secure_store: SecureStore | None = None):
         self.config = config_manager
         self.auth = auth_manager
+        self.secure_store = secure_store or SecureStore()
 
     def sign_in(self, interactive: bool = True):
         try:
@@ -41,11 +43,17 @@ class SyncService:
         return creds
 
     def sign_out(self):
+        account_email = self.config.get("google_account_email", "")
         try:
             self.auth.clear_credentials()
         except GoogleAuthError as exc:
             raise SyncServiceError(str(exc)) from exc
         self.config.clear_google_auth_state()
+        if account_email:
+            try:
+                self.secure_store.clear_cached_passphrase(account_email)
+            except SecureStoreError:
+                pass
 
     def has_remote_backup(self, interactive: bool = False) -> bool:
         creds = self._get_credentials(interactive=interactive)
@@ -185,6 +193,33 @@ class SyncService:
         updates["google_sync_file_name"] = self.config.get_google_sync_file_name()
         if updates:
             self.config.update_google_sync_state(**updates)
+
+    def cache_passphrase(self, passphrase: str):
+        email = self.config.get("google_account_email", "")
+        if not email:
+            raise SyncServiceError("Google account email is not available for secure passphrase caching")
+        try:
+            self.secure_store.save_cached_passphrase(email, passphrase)
+        except SecureStoreError as exc:
+            raise SyncServiceError(str(exc)) from exc
+
+    def load_cached_passphrase(self) -> str:
+        email = self.config.get("google_account_email", "")
+        if not email:
+            return ""
+        try:
+            return self.secure_store.load_cached_passphrase(email) or ""
+        except SecureStoreError as exc:
+            raise SyncServiceError(str(exc)) from exc
+
+    def clear_cached_passphrase(self):
+        email = self.config.get("google_account_email", "")
+        if not email:
+            return
+        try:
+            self.secure_store.clear_cached_passphrase(email)
+        except SecureStoreError as exc:
+            raise SyncServiceError(str(exc)) from exc
 
     def _backup_existing_file(self, path: Path) -> Path:
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
