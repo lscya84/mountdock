@@ -107,6 +107,66 @@ dist/release/MountDock_Portable.zip
 
 ---
 
+## Google Drive 암호화 동기화 / Google Drive Encrypted Sync
+
+**KR**  
+MountDock은 Google Drive `appDataFolder`를 이용해 `rclone.conf`를 **암호화된 형태로 백업/복원**할 수 있습니다.
+
+동작 방식:
+- Google 계정으로 로그인
+- 사용자가 입력한 패스프레이즈로 `rclone.conf`를 암호화
+- 암호화된 JSON payload만 Google Drive에 저장
+- 다른 기기에서 같은 계정으로 로그인 후 복원
+- 원하면 이 기기에서만 패스프레이즈를 안전하게 기억
+
+준비물:
+- Google OAuth client JSON 파일
+- Google Drive API 사용 가능 프로젝트
+- 앱에서 접근 가능한 `rclone.conf`
+
+기본 흐름:
+1. 설정에서 **OAuth client JSON** 파일 선택
+2. **Google 로그인** 클릭
+3. **암호화된 rclone.conf 백업** 클릭
+4. 패스프레이즈 입력 및 필요 시 “이 기기에서 기억” 선택
+5. 다른 기기에서는 **Google Drive에서 복원** 클릭
+
+보안 주의:
+- Google 로그인 자체는 복호화 키가 아닙니다
+- 복호화는 패스프레이즈가 있어야 가능합니다
+- Drive에는 평문 `rclone.conf`를 저장하지 않습니다
+- 기존 로컬 `rclone.conf`가 있으면 복원 전에 `.bak-YYYYMMDD-HHMMSS` 백업을 만듭니다
+
+**EN**  
+MountDock can back up and restore `rclone.conf` in **encrypted form** using Google Drive `appDataFolder`.
+
+How it works:
+- sign in with your Google account
+- encrypt `rclone.conf` with a user-provided passphrase
+- store only the encrypted JSON payload in Google Drive
+- restore it on another device after signing into the same Google account
+- optionally remember the passphrase securely on the current device only
+
+Requirements:
+- a Google OAuth client JSON file
+- a project with Google Drive API enabled
+- an accessible local `rclone.conf`
+
+Basic flow:
+1. choose the **OAuth client JSON** file in Settings
+2. click **Sign in with Google**
+3. click **Back up encrypted rclone.conf**
+4. enter a passphrase and optionally choose “Remember on this device”
+5. on another device, click **Restore from Google Drive**
+
+Security notes:
+- Google sign-in itself is not the decryption key
+- decryption still requires the passphrase
+- plaintext `rclone.conf` is not stored in Drive
+- if a local `rclone.conf` already exists, MountDock creates a `.bak-YYYYMMDD-HHMMSS` backup before restoring
+
+---
+
 ## 빌드 / Build
 
 ### Windows 환경 / Windows environment
