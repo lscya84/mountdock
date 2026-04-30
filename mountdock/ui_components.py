@@ -791,6 +791,73 @@ class RcloneUpdateDialog(QDialog):
         self.close_btn.setEnabled(True)
 
 
+class PassphraseDialog(QDialog):
+    def __init__(self, lang="en", title="", prompt="", require_confirm=False, parent=None):
+        super().__init__(parent)
+        self.lang = lang
+        self.require_confirm = require_confirm
+        self.setObjectName("SheetDialog")
+        self.setWindowTitle(title)
+        self.setFixedWidth(420)
+        self._init_ui(prompt)
+
+    def _init_ui(self, prompt: str):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(14)
+        layout.setContentsMargins(18, 18, 18, 18)
+
+        note = QLabel(prompt)
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        form.setHorizontalSpacing(12)
+        form.setVerticalSpacing(12)
+
+        self.passphrase_edit = QLineEdit()
+        self.passphrase_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow(tr(self.lang, "path"), self.passphrase_edit)
+
+        self.confirm_edit = None
+        if self.require_confirm:
+            self.confirm_edit = QLineEdit()
+            self.confirm_edit.setEchoMode(QLineEdit.EchoMode.Password)
+            form.addRow(tr(self.lang, "passphrase_confirm"), self.confirm_edit)
+
+        layout.addLayout(form)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+
+        cancel = QPushButton(tr(self.lang, "cancel"))
+        cancel.setObjectName("GhostBtn")
+        cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        cancel.clicked.connect(self.reject)
+
+        save = QPushButton(tr(self.lang, "save"))
+        save.setObjectName("AccentBtn")
+        save.setCursor(Qt.CursorShape.PointingHandCursor)
+        save.clicked.connect(self._validate_and_accept)
+
+        buttons.addWidget(cancel)
+        buttons.addWidget(save)
+        layout.addLayout(buttons)
+
+    def _validate_and_accept(self):
+        passphrase = self.passphrase_edit.text()
+        if not passphrase:
+            QMessageBox.warning(self, tr(self.lang, "validation_error"), tr(self.lang, "passphrase_required"))
+            return
+        if self.require_confirm and self.confirm_edit is not None and passphrase != self.confirm_edit.text():
+            QMessageBox.warning(self, tr(self.lang, "validation_error"), tr(self.lang, "passphrase_mismatch"))
+            return
+        self.accept()
+
+    def get_passphrase(self) -> str:
+        return self.passphrase_edit.text()
+
+
 class GlobalSettingsDialog(QDialog):
     def __init__(self, config_data, lang="en", parent=None):
         super().__init__(parent)
@@ -801,6 +868,10 @@ class GlobalSettingsDialog(QDialog):
         self.setFixedWidth(420)
         self.update_rclone_requested = False
         self.open_rclone_config_requested = False
+        self.google_sign_in_requested = False
+        self.google_sign_out_requested = False
+        self.google_backup_requested = False
+        self.google_restore_requested = False
         self._init_ui()
 
     def _init_ui(self):
@@ -828,8 +899,11 @@ class GlobalSettingsDialog(QDialog):
         if idx >= 0:
             self.language_combo.setCurrentIndex(idx)
 
+        self.google_client_secret_edit = QLineEdit(self.config_data.get("google_client_secret_path", ""))
+
         form.addRow(tr(self.lang, "rclone"), self._build_rclone_row())
         form.addRow(tr(self.lang, "config"), self._build_picker_row(self.rclone_conf_edit, "file"))
+        form.addRow(tr(self.lang, "google_client_secret"), self._build_picker_row(self.google_client_secret_edit, "file"))
         form.addRow(tr(self.lang, "theme"), self.theme_combo)
         form.addRow(tr(self.lang, "language"), self.language_combo)
         layout.addLayout(form)
@@ -843,6 +917,50 @@ class GlobalSettingsDialog(QDialog):
         self.rclone_config_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.rclone_config_btn.clicked.connect(self._request_rclone_config)
         layout.addWidget(self.rclone_config_btn)
+
+        self.google_sync_title = QLabel(tr(self.lang, "google_sync"))
+        self.google_sync_title.setObjectName("CardTitle")
+        layout.addWidget(self.google_sync_title)
+
+        self.google_sync_status_label = QLabel("")
+        self.google_sync_status_label.setWordWrap(True)
+        layout.addWidget(self.google_sync_status_label)
+
+        self.google_sync_backup_label = QLabel("")
+        self.google_sync_backup_label.setWordWrap(True)
+        layout.addWidget(self.google_sync_backup_label)
+
+        self.google_sync_restore_label = QLabel("")
+        self.google_sync_restore_label.setWordWrap(True)
+        layout.addWidget(self.google_sync_restore_label)
+
+        google_row = QHBoxLayout()
+        google_row.setSpacing(6)
+        self.google_sign_in_btn = QPushButton(tr(self.lang, "google_sign_in"))
+        self.google_sign_in_btn.setObjectName("GhostBtn")
+        self.google_sign_in_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.google_sign_in_btn.clicked.connect(self._request_google_sign_in)
+
+        self.google_sign_out_btn = QPushButton(tr(self.lang, "google_sign_out"))
+        self.google_sign_out_btn.setObjectName("GhostBtn")
+        self.google_sign_out_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.google_sign_out_btn.clicked.connect(self._request_google_sign_out)
+
+        self.google_backup_btn = QPushButton(tr(self.lang, "google_backup_conf"))
+        self.google_backup_btn.setObjectName("GhostBtn")
+        self.google_backup_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.google_backup_btn.clicked.connect(self._request_google_backup)
+
+        self.google_restore_btn = QPushButton(tr(self.lang, "google_restore_conf"))
+        self.google_restore_btn.setObjectName("GhostBtn")
+        self.google_restore_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.google_restore_btn.clicked.connect(self._request_google_restore)
+
+        google_row.addWidget(self.google_sign_in_btn)
+        google_row.addWidget(self.google_sign_out_btn)
+        google_row.addWidget(self.google_backup_btn)
+        google_row.addWidget(self.google_restore_btn)
+        layout.addLayout(google_row)
 
         self.auto_start_check = QCheckBox(tr(self.lang, "auto_start"))
         self.auto_start_check.setChecked(self.config_data.get("auto_start", False))
@@ -874,6 +992,11 @@ class GlobalSettingsDialog(QDialog):
         buttons.addWidget(save)
         layout.addLayout(buttons)
         self.refresh_icons(self.config_data.get("theme", "light"))
+        self.set_google_sync_status(
+            self.config_data.get("google_account_email", ""),
+            self.config_data.get("google_sync_last_uploaded_at", ""),
+            self.config_data.get("google_sync_last_downloaded_at", ""),
+        )
 
     def _build_rclone_row(self):
         row = QWidget()
@@ -931,7 +1054,7 @@ class GlobalSettingsDialog(QDialog):
 
     def refresh_icons(self, theme_name="light"):
         color = "#DCE8F5" if theme_name == "dark" else "#5F7087"
-        for edit in (self.rclone_path_edit, self.rclone_conf_edit):
+        for edit in (self.rclone_path_edit, self.rclone_conf_edit, self.google_client_secret_edit):
             edit.browse_button.setIcon(_make_line_icon("folder", color))
 
     def _request_rclone_update(self):
@@ -942,6 +1065,22 @@ class GlobalSettingsDialog(QDialog):
         self.open_rclone_config_requested = True
         self.accept()
 
+    def _request_google_sign_in(self):
+        self.google_sign_in_requested = True
+        self.accept()
+
+    def _request_google_sign_out(self):
+        self.google_sign_out_requested = True
+        self.accept()
+
+    def _request_google_backup(self):
+        self.google_backup_requested = True
+        self.accept()
+
+    def _request_google_restore(self):
+        self.google_restore_requested = True
+        self.accept()
+
     def set_rclone_version_status(self, text: str, update_available=None, tooltip=None):
         self.rclone_version_label.setText(text)
         if update_available is not None:
@@ -949,12 +1088,30 @@ class GlobalSettingsDialog(QDialog):
         if tooltip is not None:
             self.rclone_update_btn.setToolTip(tooltip)
 
+    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = ""):
+        signed_in = bool(str(email).strip())
+        self.google_sync_status_label.setText(
+            tr(self.lang, "google_sync_status_signed_in", email=email)
+            if signed_in else tr(self.lang, "google_sync_status_signed_out")
+        )
+        self.google_sync_backup_label.setText(
+            tr(self.lang, "google_sync_last_upload", value=last_uploaded) if last_uploaded else ""
+        )
+        self.google_sync_restore_label.setText(
+            tr(self.lang, "google_sync_last_restore", value=last_downloaded) if last_downloaded else ""
+        )
+        self.google_sign_in_btn.setEnabled(True)
+        self.google_sign_out_btn.setEnabled(signed_in)
+        self.google_backup_btn.setEnabled(True)
+        self.google_restore_btn.setEnabled(True)
+
     def get_data(self):
         return {
             "rclone_path": self.rclone_path_edit.text().strip() or "rclone.exe",
             "rclone_conf_path": self.rclone_conf_edit.text().strip(),
             "theme": self.theme_combo.currentText(),
             "language": self.language_combo.currentData(),
+            "google_client_secret_path": self.google_client_secret_edit.text().strip(),
             "auto_start": self.auto_start_check.isChecked(),
             "mount_on_launch": self.mount_on_launch_check.isChecked(),
             "start_minimized": self.start_minimized_check.isChecked(),

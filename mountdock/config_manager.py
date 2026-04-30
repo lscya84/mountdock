@@ -59,6 +59,8 @@ class ConfigManager:
             "google_account_email": "",
             "google_sync_last_uploaded_at": "",
             "google_sync_last_downloaded_at": "",
+            "google_client_secret_path": "",
+            "google_token_path": ".mountdock/google_drive_token.json",
             "vault_cache_enabled": True,
             "device_id": str(uuid.uuid4()),
         }
@@ -193,6 +195,15 @@ class ConfigManager:
                 return candidate
         return None
 
+    def resolve_app_relative_path(self, raw_path: str | None) -> str:
+        raw = (raw_path or "").strip()
+        if not raw:
+            return ""
+        candidate = Path(raw)
+        if candidate.is_absolute():
+            return str(candidate)
+        return str((APP_DIR / candidate).resolve())
+
     def parse_rclone_conf(self, conf_path: str | None = None):
         target = Path(conf_path) if conf_path else self.find_default_rclone_conf()
         if not target or not target.exists():
@@ -226,6 +237,15 @@ class ConfigManager:
     def get_google_sync_file_name(self) -> str:
         name = str(self.config.get("google_sync_file_name", "")).strip()
         return name or "mountdock_rclone_conf_v1.json"
+
+    def resolve_google_client_secret_path(self, value: str | None = None) -> str:
+        raw = value if value is not None else self.config.get("google_client_secret_path", "")
+        return self.resolve_app_relative_path(raw)
+
+    def resolve_google_token_path(self, value: str | None = None) -> str:
+        raw = value if value is not None else self.config.get("google_token_path", ".mountdock/google_drive_token.json")
+        resolved = self.resolve_app_relative_path(raw)
+        return resolved or str((APP_DIR / ".mountdock" / "google_drive_token.json").resolve())
 
     def update_google_sync_state(self, **updates):
         changed = False
