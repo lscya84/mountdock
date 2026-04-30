@@ -90,6 +90,7 @@ STRINGS = {
         "google_sync_status_signed_in": "Signed in as {email}",
         "google_sync_last_upload": "Last backup: {value}",
         "google_sync_last_restore": "Last restore: {value}",
+        "google_restore_target": "Restore target: {value}",
         "google_sign_in": "Sign in with Google",
         "google_sign_out": "Sign out",
         "google_backup_conf": "Back up encrypted rclone.conf",
@@ -112,6 +113,8 @@ STRINGS = {
         "google_sync_cached_passphrase": "Saved passphrase from this device was used.",
         "google_sync_cache_saved": "Passphrase saved securely on this device.",
         "google_sync_cache_cleared": "Saved passphrase removed from this device.",
+        "google_restore_confirm_title": "Confirm Restore",
+        "google_restore_confirm": "Restore encrypted rclone.conf to:\n\n{path}\n\nIf a file already exists, MountDock will create a timestamped backup before replacing it.",
     },
     "ko": {
         "app_title": "MountDock",
@@ -204,6 +207,7 @@ STRINGS = {
         "google_sync_status_signed_in": "로그인됨: {email}",
         "google_sync_last_upload": "마지막 백업: {value}",
         "google_sync_last_restore": "마지막 복원: {value}",
+        "google_restore_target": "복원 대상 경로: {value}",
         "google_sign_in": "Google 로그인",
         "google_sign_out": "로그아웃",
         "google_backup_conf": "암호화된 rclone.conf 백업",
@@ -226,6 +230,8 @@ STRINGS = {
         "google_sync_cached_passphrase": "이 기기에 저장된 패스프레이즈를 사용했습니다.",
         "google_sync_cache_saved": "패스프레이즈를 이 기기에 안전하게 저장했습니다.",
         "google_sync_cache_cleared": "이 기기에 저장된 패스프레이즈를 삭제했습니다.",
+        "google_restore_confirm_title": "복원 확인",
+        "google_restore_confirm": "암호화된 rclone.conf를 아래 경로로 복원합니다:\n\n{path}\n\n기존 파일이 있으면 MountDock이 먼저 시각이 포함된 백업 파일을 만든 뒤 교체합니다.",
     },
 }
 

@@ -205,6 +205,7 @@ class LDriveApp:
             self.config.get("google_account_email", ""),
             self.config.get("google_sync_last_uploaded_at", ""),
             self.config.get("google_sync_last_downloaded_at", ""),
+            self.config.resolve_rclone_conf_path() or self.config.get("rclone_conf_path", ""),
         )
 
     def _prompt_passphrase(self, title_key: str, prompt_key: str, require_confirm=False, remember_enabled=False):
@@ -281,7 +282,17 @@ class LDriveApp:
                 passphrase, remember = self._prompt_passphrase("passphrase_title_restore", "passphrase_prompt_restore", require_confirm=False, remember_enabled=True)
                 if not passphrase:
                     return
-            result = service.restore_conf(passphrase, interactive=True)
+            target_path = service.get_restore_target_path()
+            confirmed = QMessageBox.question(
+                self.window,
+                tr(self.lang, "google_restore_confirm_title"),
+                tr(self.lang, "google_restore_confirm", path=str(target_path)),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if confirmed != QMessageBox.StandardButton.Yes:
+                return
+            result = service.restore_conf(passphrase, interactive=True, target_path=target_path)
             if not service.load_cached_passphrase() and passphrase:
                 self._handle_passphrase_cache(service, remember, passphrase)
         except SyncServiceError as exc:

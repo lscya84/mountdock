@@ -943,6 +943,10 @@ class GlobalSettingsDialog(QDialog):
         self.google_sync_restore_label.setWordWrap(True)
         layout.addWidget(self.google_sync_restore_label)
 
+        self.google_sync_target_label = QLabel("")
+        self.google_sync_target_label.setWordWrap(True)
+        layout.addWidget(self.google_sync_target_label)
+
         google_row = QHBoxLayout()
         google_row.setSpacing(6)
         self.google_sign_in_btn = QPushButton(tr(self.lang, "google_sign_in"))
@@ -1097,7 +1101,7 @@ class GlobalSettingsDialog(QDialog):
         if tooltip is not None:
             self.rclone_update_btn.setToolTip(tooltip)
 
-    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = ""):
+    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = ""):
         signed_in = bool(str(email).strip())
         self.google_sync_status_label.setText(
             tr(self.lang, "google_sync_status_signed_in", email=email)
@@ -1108,6 +1112,9 @@ class GlobalSettingsDialog(QDialog):
         )
         self.google_sync_restore_label.setText(
             tr(self.lang, "google_sync_last_restore", value=last_downloaded) if last_downloaded else ""
+        )
+        self.google_sync_target_label.setText(
+            tr(self.lang, "google_restore_target", value=restore_target) if restore_target else ""
         )
         self.google_sign_in_btn.setEnabled(True)
         self.google_sign_out_btn.setEnabled(signed_in)
