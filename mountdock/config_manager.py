@@ -53,6 +53,14 @@ class ConfigManager:
             "profiles": [],
             "rclone_path": "rclone.exe",
             "rclone_conf_path": "",
+            "google_sync_enabled": False,
+            "google_sync_mode": "appdata",
+            "google_sync_file_name": "mountdock_rclone_conf_v1.json",
+            "google_account_email": "",
+            "google_sync_last_uploaded_at": "",
+            "google_sync_last_downloaded_at": "",
+            "vault_cache_enabled": True,
+            "device_id": str(uuid.uuid4()),
         }
         self.load_config()
 
@@ -76,6 +84,10 @@ class ConfigManager:
                 if default_conf:
                     self.config["rclone_conf_path"] = str(default_conf)
                     self.save_config()
+
+            if not self.config.get("device_id"):
+                self.config["device_id"] = str(uuid.uuid4())
+                self.save_config()
         except Exception as e:
             logger.error(f"설정 로드 중 오류 발생: {e}")
 
@@ -202,6 +214,33 @@ class ConfigManager:
     def set(self, key, value):
         self.config[key] = value
         self.save_config()
+
+    def get_device_id(self) -> str:
+        device_id = str(self.config.get("device_id", "")).strip()
+        if not device_id:
+            device_id = str(uuid.uuid4())
+            self.config["device_id"] = device_id
+            self.save_config()
+        return device_id
+
+    def get_google_sync_file_name(self) -> str:
+        name = str(self.config.get("google_sync_file_name", "")).strip()
+        return name or "mountdock_rclone_conf_v1.json"
+
+    def update_google_sync_state(self, **updates):
+        changed = False
+        for key, value in updates.items():
+            if self.config.get(key) != value:
+                self.config[key] = value
+                changed = True
+        if changed:
+            self.save_config()
+
+    def clear_google_auth_state(self):
+        self.update_google_sync_state(
+            google_account_email="",
+            google_sync_enabled=False,
+        )
 
     def get_startup_command(self) -> str:
         if getattr(sys, 'frozen', False):
