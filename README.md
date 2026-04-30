@@ -199,6 +199,11 @@ python release_portable.py
 - [ ] **KR** 언어 전환 확인 / **EN** Verify language switching
 - [ ] **KR** rclone 업데이트 모달 확인 / **EN** Verify rclone updater behavior
 - [ ] **KR** 포터블 경로 동작 확인 / **EN** Verify portable path behavior
+- [ ] **KR** Google OAuth client JSON 선택 후 로그인 확인 / **EN** Verify Google sign-in after selecting OAuth client JSON
+- [ ] **KR** 암호화 백업 업로드 확인 / **EN** Verify encrypted backup upload
+- [ ] **KR** 다른 경로에 기존 `rclone.conf`가 있을 때 백업 후 복원 확인 / **EN** Verify restore creates a backup when local `rclone.conf` already exists
+- [ ] **KR** “이 기기에서 기억” 체크 후 재복원 시 저장된 패스프레이즈 사용 확인 / **EN** Verify remembered-on-device passphrase is reused on later restore
+- [ ] **KR** 로그아웃 시 로컬 저장 패스프레이즈 정리 확인 / **EN** Verify sign-out clears the locally saved passphrase
 
 ---
 
