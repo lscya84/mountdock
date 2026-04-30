@@ -76,6 +76,7 @@ dist/MountDock/
 python build.py --mode onedir
 python release_portable.py
 python release_installer.py
+release_windows.bat vX.Y.Z
 ```
 
 출력물 / Release outputs:
@@ -228,6 +229,7 @@ python release_installer.py
 - 사전에 **Inno Setup 6**가 설치되어 있어야 합니다.
 - 기본 설치 경로는 사용자 기준 `LocalAppData\Programs\MountDock` 입니다.
 - 설치형은 내부적으로 onedir 결과물을 감싼 형태이므로, 실행 안정성과 배포 편의성을 함께 가져갑니다.
+- Windows에서는 `release_windows.bat vX.Y.Z`로 onedir + portable ZIP + installer EXE를 한 번에 만들 수 있습니다.
 
 ---
 
