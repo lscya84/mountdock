@@ -2,6 +2,8 @@ STRINGS = {
     "en": {
         "app_title": "MountDock",
         "settings_title": "Settings",
+        "mountdock_section": "MountDock",
+        "options_section": "Options",
         "drive_title": "Drive",
         "open": "Open",
         "exit": "Exit",
@@ -149,6 +151,8 @@ STRINGS = {
     "ko": {
         "app_title": "MountDock",
         "settings_title": "설정",
+        "mountdock_section": "MountDock",
+        "options_section": "옵션",
         "drive_title": "드라이브",
         "open": "열기",
         "exit": "종료",

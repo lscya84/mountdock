@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
@@ -1139,7 +1140,7 @@ class GlobalSettingsDialog(QDialog):
         self.config_data = config_data
         self.setObjectName("SheetDialog")
         self.setWindowTitle(tr(self.lang, "settings_title"))
-        self.setFixedWidth(420)
+        self.setFixedWidth(520)
         self.update_rclone_requested = False
         self.check_app_update_requested = False
         self.open_app_download_requested = False
@@ -1183,37 +1184,49 @@ class GlobalSettingsDialog(QDialog):
         self.rclone_version_label.setWordWrap(True)
         layout.addWidget(self.rclone_version_label)
 
-        self.app_version_label = QLabel(self.config_data.get("app_version_status", tr(self.lang, "app_version_unknown")))
-        self.app_version_label.setWordWrap(True)
-        layout.addWidget(self.app_version_label)
-
-        self.app_update_buttons = QHBoxLayout()
-        self.app_update_check_btn = QPushButton(tr(self.lang, "app_update_check"))
-        self.app_update_check_btn.setObjectName("GhostBtn")
-        self.app_update_check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.app_update_check_btn.clicked.connect(self._request_app_update_check)
-        self.app_update_buttons.addWidget(self.app_update_check_btn)
-
-        self.app_update_install_btn = QPushButton(tr(self.lang, "app_update_install_now"))
-        self.app_update_install_btn.setObjectName("GhostBtn")
-        self.app_update_install_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.app_update_install_btn.setEnabled(bool(self.config_data.get("app_installer_url")))
-        self.app_update_install_btn.clicked.connect(self._request_app_update_install)
-        self.app_update_buttons.addWidget(self.app_update_install_btn)
-
-        self.app_update_open_btn = QPushButton(tr(self.lang, "app_update_open_download"))
-        self.app_update_open_btn.setObjectName("GhostBtn")
-        self.app_update_open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.app_update_open_btn.setEnabled(bool(self.config_data.get("app_download_url")))
-        self.app_update_open_btn.clicked.connect(self._request_app_download_open)
-        self.app_update_buttons.addWidget(self.app_update_open_btn)
-        layout.addLayout(self.app_update_buttons)
-
         self.rclone_config_btn = QPushButton(tr(self.lang, "rclone_config_button"))
         self.rclone_config_btn.setObjectName("GhostBtn")
         self.rclone_config_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.rclone_config_btn.clicked.connect(self._request_rclone_config)
         layout.addWidget(self.rclone_config_btn)
+
+        self.mountdock_title = QLabel(tr(self.lang, "mountdock_section"))
+        self.mountdock_title.setObjectName("CardTitle")
+        layout.addWidget(self.mountdock_title)
+
+        self.app_version_label = QLabel(self.config_data.get("app_version_status", tr(self.lang, "app_version_unknown")))
+        self.app_version_label.setWordWrap(True)
+        layout.addWidget(self.app_version_label)
+
+        self.app_update_buttons = QGridLayout()
+        self.app_update_buttons.setHorizontalSpacing(8)
+        self.app_update_buttons.setVerticalSpacing(8)
+        self.app_update_check_btn = QPushButton(tr(self.lang, "app_update_check"))
+        self.app_update_check_btn.setObjectName("GhostBtn")
+        self.app_update_check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.app_update_check_btn.setMinimumHeight(36)
+        self.app_update_check_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.app_update_check_btn.clicked.connect(self._request_app_update_check)
+        self.app_update_buttons.addWidget(self.app_update_check_btn, 0, 0)
+
+        self.app_update_install_btn = QPushButton(tr(self.lang, "app_update_install_now"))
+        self.app_update_install_btn.setObjectName("GhostBtn")
+        self.app_update_install_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.app_update_install_btn.setMinimumHeight(36)
+        self.app_update_install_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.app_update_install_btn.setEnabled(bool(self.config_data.get("app_installer_url")))
+        self.app_update_install_btn.clicked.connect(self._request_app_update_install)
+        self.app_update_buttons.addWidget(self.app_update_install_btn, 0, 1)
+
+        self.app_update_open_btn = QPushButton(tr(self.lang, "app_update_open_download"))
+        self.app_update_open_btn.setObjectName("GhostBtn")
+        self.app_update_open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.app_update_open_btn.setMinimumHeight(36)
+        self.app_update_open_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.app_update_open_btn.setEnabled(bool(self.config_data.get("app_download_url")))
+        self.app_update_open_btn.clicked.connect(self._request_app_download_open)
+        self.app_update_buttons.addWidget(self.app_update_open_btn, 1, 0, 1, 2)
+        layout.addLayout(self.app_update_buttons)
 
         self.google_sync_title = QLabel(tr(self.lang, "google_sync"))
         self.google_sync_title.setObjectName("CardTitle")
@@ -1232,6 +1245,10 @@ class GlobalSettingsDialog(QDialog):
         self.google_sync_open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.google_sync_open_btn.clicked.connect(self._request_open_google_sync)
         layout.addWidget(self.google_sync_open_btn)
+
+        self.options_title = QLabel(tr(self.lang, "options_section"))
+        self.options_title.setObjectName("CardTitle")
+        layout.addWidget(self.options_title)
 
         self.auto_start_check = QCheckBox(tr(self.lang, "auto_start"))
         self.auto_start_check.setChecked(self.config_data.get("auto_start", False))
