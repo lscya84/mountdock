@@ -1,12 +1,15 @@
 import ctypes
 import os
 import sys
+import webbrowser
 from pathlib import Path
 
 from PyQt6.QtCore import QSharedMemory, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
+from mountdock import __version__
+from mountdock.app_updater import AppUpdater
 from mountdock.config_manager import ConfigManager
 from mountdock.google_auth import GoogleAuthManager
 from mountdock.i18n import tr
@@ -51,6 +54,7 @@ class LDriveApp:
             self.config.resolve_rclone_path(),
             self.config.resolve_rclone_conf_path(),
         )
+        self.app_updater = AppUpdater()
         self.rclone_updater = RcloneUpdater()
         self.config.check_and_fix_startup()
         self.window = LDriveMainWindow(self.lang)
@@ -134,14 +138,27 @@ class LDriveApp:
     def handle_settings(self):
         settings_data = dict(self.config.config)
         version_info = self._get_rclone_version_info()
+        app_version_info = self._get_app_version_info()
         settings_data["rclone_version_status"] = version_info["label"]
         settings_data["rclone_update_available"] = version_info["update_available"]
         settings_data["rclone_update_tooltip"] = version_info["tooltip"]
+        settings_data["app_version_status"] = app_version_info["label"]
+        settings_data["app_update_available"] = app_version_info["update_available"]
+        settings_data["app_update_tooltip"] = app_version_info["tooltip"]
+        settings_data["app_download_url"] = app_version_info["download_url"]
         dialog = GlobalSettingsDialog(settings_data, self.lang, self.window)
         self._update_google_sync_dialog_state(dialog)
         while True:
             if not dialog.exec():
                 return
+            if dialog.check_app_update_requested:
+                dialog.check_app_update_requested = False
+                self._handle_app_update_check(dialog)
+                continue
+            if dialog.open_app_download_requested:
+                dialog.open_app_download_requested = False
+                self._open_app_download_page(dialog.config_data.get("app_download_url") or self.app_updater.get_releases_url())
+                continue
             data = dialog.get_data()
             if dialog.update_rclone_requested:
                 dialog.update_rclone_requested = False
@@ -672,6 +689,92 @@ class LDriveApp:
             "update_available": True,
             "tooltip": tr(self.lang, "tooltip_not_detected"),
         }
+
+    def _get_app_version_info(self):
+        installed_version = __version__
+        download_url = self.app_updater.get_releases_url()
+        try:
+            latest_release = self.app_updater.get_latest_release()
+            latest_version = latest_release.get("version", "")
+            download_url = latest_release.get("url") or download_url
+        except Exception:
+            latest_version = ""
+
+        if installed_version and latest_version:
+            if self.app_updater.is_update_available(installed_version, latest_version):
+                return {
+                    "label": tr(self.lang, "app_update_available", version=installed_version),
+                    "update_available": True,
+                    "tooltip": tr(self.lang, "tooltip_app_update_available", installed=installed_version, latest=latest_version),
+                    "installed_version": installed_version,
+                    "latest_version": latest_version,
+                    "download_url": download_url,
+                }
+            return {
+                "label": tr(self.lang, "app_latest", version=installed_version),
+                "update_available": False,
+                "tooltip": tr(self.lang, "tooltip_app_latest", version=installed_version),
+                "installed_version": installed_version,
+                "latest_version": latest_version,
+                "download_url": download_url,
+            }
+
+        return {
+            "label": tr(self.lang, "app_version_current", version=installed_version) if installed_version else tr(self.lang, "app_version_unknown"),
+            "update_available": False,
+            "tooltip": tr(self.lang, "tooltip_app_unknown"),
+            "installed_version": installed_version,
+            "latest_version": latest_version,
+            "download_url": download_url,
+        }
+
+    def _handle_app_update_check(self, dialog):
+        info = self._get_app_version_info()
+        dialog.set_app_version_status(info["label"], info["update_available"], info["tooltip"], info["download_url"])
+
+        if info["latest_version"] and info["update_available"]:
+            message = tr(
+                self.lang,
+                "app_update_available_message",
+                installed=info["installed_version"],
+                latest=info["latest_version"],
+            )
+            prompt = f"{message}\n\n{tr(self.lang, 'app_update_open_prompt')}"
+            reply = QMessageBox.question(
+                self.window,
+                tr(self.lang, "app_update_title"),
+                prompt,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self._open_app_download_page(info["download_url"])
+            return
+
+        if info["latest_version"]:
+            QMessageBox.information(
+                self.window,
+                tr(self.lang, "app_update_title"),
+                tr(
+                    self.lang,
+                    "app_update_latest_message",
+                    installed=info["installed_version"],
+                    latest=info["latest_version"],
+                ),
+            )
+            return
+
+        QMessageBox.warning(
+            self.window,
+            tr(self.lang, "app_update_title"),
+            tr(self.lang, "app_update_unknown_message"),
+        )
+
+    def _open_app_download_page(self, url: str):
+        try:
+            webbrowser.open(url)
+        except Exception as exc:
+            QMessageBox.warning(self.window, tr(self.lang, "error"), str(exc))
 
     def _refresh_remote_cache(self, rclone_path=None, conf_path=None):
         active_rclone_path = rclone_path or self.engine.rclone_path

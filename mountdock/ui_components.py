@@ -1073,6 +1073,8 @@ class GlobalSettingsDialog(QDialog):
         self.setWindowTitle(tr(self.lang, "settings_title"))
         self.setFixedWidth(420)
         self.update_rclone_requested = False
+        self.check_app_update_requested = False
+        self.open_app_download_requested = False
         self.open_rclone_config_requested = False
         self.open_google_sync_requested = False
         self._init_ui()
@@ -1111,6 +1113,25 @@ class GlobalSettingsDialog(QDialog):
         self.rclone_version_label = QLabel(self.config_data.get("rclone_version_status", tr(self.lang, "rclone_version_unknown")))
         self.rclone_version_label.setWordWrap(True)
         layout.addWidget(self.rclone_version_label)
+
+        self.app_version_label = QLabel(self.config_data.get("app_version_status", tr(self.lang, "app_version_unknown")))
+        self.app_version_label.setWordWrap(True)
+        layout.addWidget(self.app_version_label)
+
+        self.app_update_buttons = QHBoxLayout()
+        self.app_update_check_btn = QPushButton(tr(self.lang, "app_update_check"))
+        self.app_update_check_btn.setObjectName("GhostBtn")
+        self.app_update_check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.app_update_check_btn.clicked.connect(self._request_app_update_check)
+        self.app_update_buttons.addWidget(self.app_update_check_btn)
+
+        self.app_update_open_btn = QPushButton(tr(self.lang, "app_update_open_download"))
+        self.app_update_open_btn.setObjectName("GhostBtn")
+        self.app_update_open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.app_update_open_btn.setEnabled(bool(self.config_data.get("app_download_url")))
+        self.app_update_open_btn.clicked.connect(self._request_app_download_open)
+        self.app_update_buttons.addWidget(self.app_update_open_btn)
+        layout.addLayout(self.app_update_buttons)
 
         self.rclone_config_btn = QPushButton(tr(self.lang, "rclone_config_button"))
         self.rclone_config_btn.setObjectName("GhostBtn")
@@ -1235,6 +1256,14 @@ class GlobalSettingsDialog(QDialog):
         self.update_rclone_requested = True
         self.accept()
 
+    def _request_app_update_check(self):
+        self.check_app_update_requested = True
+        self.accept()
+
+    def _request_app_download_open(self):
+        self.open_app_download_requested = True
+        self.accept()
+
     def _request_rclone_config(self):
         self.open_rclone_config_requested = True
         self.accept()
@@ -1249,6 +1278,14 @@ class GlobalSettingsDialog(QDialog):
             self.rclone_update_btn.setEnabled(update_available)
         if tooltip is not None:
             self.rclone_update_btn.setToolTip(tooltip)
+
+    def set_app_version_status(self, text: str, update_available=None, tooltip=None, download_url: str = ""):
+        self.app_version_label.setText(text)
+        if tooltip is not None:
+            self.app_update_check_btn.setToolTip(tooltip)
+            self.app_update_open_btn.setToolTip(tooltip)
+        self.app_update_open_btn.setEnabled(bool(download_url))
+        self.config_data["app_download_url"] = download_url
 
     def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None, signed_in: bool | None = None):
         effective_signed_in = bool(str(email).strip()) if signed_in is None else bool(signed_in)
