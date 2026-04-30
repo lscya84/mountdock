@@ -4,7 +4,7 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from PyQt6.QtCore import QSharedMemory, Qt
+from PyQt6.QtCore import QFileSystemWatcher, QSharedMemory, QTimer, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
@@ -80,14 +80,22 @@ class LDriveApp:
         self.tray.show()
         self.watchers = {}
         self.remote_cache = []
+        self.remote_details = []
         self._active_rclone_worker = None
         self._active_app_update_worker = None
+        self._conf_file_watcher = QFileSystemWatcher()
+        self._conf_file_watcher.fileChanged.connect(self._on_rclone_conf_changed)
+        self._auto_sync_timer = QTimer()
+        self._auto_sync_timer.setSingleShot(True)
+        self._auto_sync_timer.timeout.connect(self._run_auto_google_sync)
+        self._last_conf_mtime = None
 
         self._wire_signals()
 
         current_theme = self.config.get("theme", "light")
         self.window._apply_styles(current_theme)
         self._refresh_remote_cache()
+        self._refresh_rclone_conf_watch()
         self._setup_dashboards()
 
         if self.config.get("mount_on_launch"):
@@ -207,6 +215,7 @@ class LDriveApp:
             self.config.resolve_rclone_path(data["rclone_path"]),
             self.config.resolve_rclone_conf_path(data["rclone_conf_path"]),
         )
+        self._refresh_rclone_conf_watch()
         if refresh_remotes:
             self._refresh_remote_cache()
 
@@ -254,7 +263,78 @@ class LDriveApp:
         relative = os.path.relpath(imported, self.config.get_app_dir())
         data["rclone_conf_path"] = relative
         self.window.append_log(f"Imported rclone.conf to {imported}")
+        self._refresh_rclone_conf_watch()
         return imported
+
+    def _refresh_rclone_conf_watch(self):
+        try:
+            watched = self._conf_file_watcher.files()
+            if watched:
+                self._conf_file_watcher.removePaths(watched)
+        except Exception:
+            pass
+
+        conf_path = (self.config.resolve_rclone_conf_path() or "").strip()
+        if not conf_path:
+            self._last_conf_mtime = None
+            return
+
+        path = Path(conf_path)
+        if path.exists():
+            try:
+                self._conf_file_watcher.addPath(str(path))
+                self._last_conf_mtime = path.stat().st_mtime_ns
+            except Exception:
+                self._last_conf_mtime = None
+        else:
+            self._last_conf_mtime = None
+
+    def _on_rclone_conf_changed(self, path: str):
+        conf_path = Path(path)
+        if conf_path.exists():
+            try:
+                current_mtime = conf_path.stat().st_mtime_ns
+            except Exception:
+                current_mtime = None
+            if current_mtime is not None and current_mtime == self._last_conf_mtime:
+                self._refresh_rclone_conf_watch()
+                return
+            self._last_conf_mtime = current_mtime
+
+        self._refresh_rclone_conf_watch()
+        self._refresh_remote_cache()
+
+        if self._is_google_auto_sync_ready():
+            self.window.append_log(tr(self.lang, "google_sync_auto_detected"))
+            self._auto_sync_timer.start(15000)
+
+    def _is_google_auto_sync_ready(self) -> bool:
+        if not bool(self.config.get("google_sync_enabled", False)):
+            return False
+
+        try:
+            service = self._build_sync_service()
+            if not service.auth.has_cached_credentials():
+                return False
+            return bool(service.load_cached_passphrase())
+        except Exception:
+            return False
+
+    def _run_auto_google_sync(self):
+        if not self._is_google_auto_sync_ready():
+            return
+
+        try:
+            service = self._build_sync_service()
+            passphrase = service.load_cached_passphrase()
+            if not passphrase:
+                return
+            service.backup_current_conf(passphrase, interactive=False)
+            self.window.append_log(tr(self.lang, "google_sync_auto_backup_ok"))
+        except SyncServiceError as exc:
+            self.window.append_log(tr(self.lang, "google_sync_auto_backup_failed", message=str(exc)))
+        except Exception as exc:
+            self.window.append_log(tr(self.lang, "google_sync_auto_backup_failed", message=str(exc)))
 
     def _handle_passphrase_cache(self, service: SyncService, remember: bool, passphrase: str):
         if remember:
@@ -428,6 +508,7 @@ class LDriveApp:
             self.config.resolve_rclone_path(),
             self.config.resolve_rclone_conf_path(),
         )
+        self._refresh_rclone_conf_watch()
         self._refresh_remote_cache()
         self._update_google_sync_dialog_state(dialog)
         self.window.append_log(tr(self.lang, "google_sync_restore_ok"))
@@ -481,7 +562,7 @@ class LDriveApp:
         used_remotes = [p.get("remote", "") for p in profiles]
         system_used_letters = self._get_system_used_drive_letters()
         dialog = DriveSettingsDialog(
-            self._get_available_remotes(),
+            self._get_available_remote_details(),
             self.lang,
             self.window,
             used_letters=used_letters,
@@ -505,7 +586,7 @@ class LDriveApp:
         used_remotes = [p.get("remote", "") for p in profiles]
         system_used_letters = self._get_system_used_drive_letters()
         dialog = DriveSettingsDialog(
-            self._get_available_remotes(),
+            self._get_available_remote_details(),
             self.lang,
             self.window,
             profile,
@@ -855,16 +936,28 @@ class LDriveApp:
 
         try:
             self.engine.set_paths(active_rclone_path, active_conf_path)
-            parsed = [item.get("name") for item in self.config.parse_rclone_conf(active_conf_path) if item.get("name")]
+            parsed_entries = self.config.parse_rclone_conf(active_conf_path)
+            parsed = [item.get("name") for item in parsed_entries if item.get("name")]
             listed = self.engine.get_remotes()
         finally:
             self.engine.set_paths(original_rclone_path, original_conf_path)
 
         merged = []
+        detail_map = {}
+        for entry in parsed_entries:
+            name = entry.get("name")
+            if not name:
+                continue
+            detail_map[name] = {
+                "name": name,
+                "type": entry.get("type", ""),
+            }
         for name in parsed + listed:
             if name and name not in merged:
                 merged.append(name)
+                detail_map.setdefault(name, {"name": name, "type": ""})
         self.remote_cache = merged
+        self.remote_details = [detail_map[name] for name in merged if name in detail_map]
         if merged:
             self.window.append_log(tr(self.lang, "loaded_remotes", count=len(merged)))
         else:
@@ -875,6 +968,12 @@ class LDriveApp:
             return self.remote_cache
         self._refresh_remote_cache()
         return self.remote_cache
+
+    def _get_available_remote_details(self):
+        if self.remote_details:
+            return self.remote_details
+        self._refresh_remote_cache()
+        return self.remote_details
 
     def _get_system_used_drive_letters(self):
         used = set()

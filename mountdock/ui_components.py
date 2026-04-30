@@ -96,9 +96,136 @@ def _make_line_icon(kind: str, color: str, size: int = 16) -> QIcon:
         path.lineTo(3.8, 12.2)
         path.closeSubpath()
         painter.drawPath(path)
+    elif kind == "cloud":
+        painter.drawArc(QRectF(3.0, 6.0, 4.0, 4.0), 80 * 16, 220 * 16)
+        painter.drawArc(QRectF(5.2, 4.0, 5.2, 5.2), 20 * 16, 220 * 16)
+        painter.drawArc(QRectF(8.2, 5.5, 4.0, 4.0), 250 * 16, 200 * 16)
+        painter.drawLine(QPointF(4.2, 10.0), QPointF(11.8, 10.0))
+    elif kind == "server":
+        painter.drawRoundedRect(QRectF(3.0, 3.5, 10.0, 4.0), 1.3, 1.3)
+        painter.drawRoundedRect(QRectF(3.0, 8.5, 10.0, 4.0), 1.3, 1.3)
+        painter.drawLine(QPointF(5.0, 5.5), QPointF(6.5, 5.5))
+        painter.drawLine(QPointF(5.0, 10.5), QPointF(6.5, 10.5))
+    elif kind == "globe":
+        painter.drawEllipse(QRectF(2.8, 2.8, 10.4, 10.4))
+        painter.drawArc(QRectF(5.0, 2.8, 6.0, 10.4), 90 * 16, 180 * 16)
+        painter.drawArc(QRectF(5.0, 2.8, 6.0, 10.4), 270 * 16, 180 * 16)
+        painter.drawLine(QPointF(3.5, 8.0), QPointF(12.5, 8.0))
+        painter.drawArc(QRectF(2.8, 5.0, 10.4, 6.0), 0, 180 * 16)
+        painter.drawArc(QRectF(2.8, 5.0, 10.4, 6.0), 180 * 16, 180 * 16)
+    elif kind == "triangle":
+        path = QPainterPath()
+        path.moveTo(8.0, 2.8)
+        path.lineTo(3.3, 11.0)
+        path.lineTo(12.7, 11.0)
+        path.closeSubpath()
+        painter.drawPath(path)
+        painter.drawLine(QPointF(8.0, 2.8), QPointF(8.0, 11.0))
+    elif kind == "box":
+        painter.drawRect(QRectF(3.5, 3.5, 9.0, 9.0))
+        painter.drawLine(QPointF(3.5, 6.2), QPointF(12.5, 6.2))
+        painter.drawLine(QPointF(8.0, 3.5), QPointF(8.0, 12.5))
+    elif kind == "dbox":
+        path = QPainterPath()
+        path.moveTo(4.0, 5.0)
+        path.lineTo(6.5, 3.4)
+        path.lineTo(9.0, 5.0)
+        path.lineTo(6.5, 6.6)
+        path.closeSubpath()
+        painter.drawPath(path)
+        path2 = QPainterPath()
+        path2.moveTo(7.0, 5.0)
+        path2.lineTo(9.5, 3.4)
+        path2.lineTo(12.0, 5.0)
+        path2.lineTo(9.5, 6.6)
+        path2.closeSubpath()
+        painter.drawPath(path2)
+        path3 = QPainterPath()
+        path3.moveTo(4.0, 8.0)
+        path3.lineTo(6.5, 6.4)
+        path3.lineTo(9.0, 8.0)
+        path3.lineTo(6.5, 9.6)
+        path3.closeSubpath()
+        painter.drawPath(path3)
+        path4 = QPainterPath()
+        path4.moveTo(7.0, 8.0)
+        path4.lineTo(9.5, 6.4)
+        path4.lineTo(12.0, 8.0)
+        path4.lineTo(9.5, 9.6)
+        path4.closeSubpath()
+        painter.drawPath(path4)
 
     painter.end()
     return QIcon(pixmap)
+
+
+def get_drive_icon_choices(lang: str = "en"):
+    return [
+        {"key": "auto", "icon": "folder", "label": tr(lang, "drive_icon_auto")},
+        {"key": "google_drive", "icon": "triangle", "label": tr(lang, "drive_icon_google_drive")},
+        {"key": "smb", "icon": "server", "label": tr(lang, "drive_icon_smb")},
+        {"key": "webdav", "icon": "globe", "label": tr(lang, "drive_icon_webdav")},
+        {"key": "onedrive", "icon": "cloud", "label": tr(lang, "drive_icon_onedrive")},
+        {"key": "dropbox", "icon": "dbox", "label": tr(lang, "drive_icon_dropbox")},
+        {"key": "s3", "icon": "box", "label": tr(lang, "drive_icon_s3")},
+        {"key": "generic_cloud", "icon": "cloud", "label": tr(lang, "drive_icon_generic_cloud")},
+        {"key": "generic_folder", "icon": "folder", "label": tr(lang, "drive_icon_generic_folder")},
+    ]
+
+
+def infer_drive_icon_key(remote_type: str | None, remote_name: str | None = None) -> str:
+    remote_type = (remote_type or "").strip().lower()
+    remote_name = (remote_name or "").strip().lower()
+
+    mapping = {
+        "drive": "google_drive",
+        "google cloud storage": "generic_cloud",
+        "smb": "smb",
+        "webdav": "webdav",
+        "onedrive": "onedrive",
+        "dropbox": "dropbox",
+        "s3": "s3",
+        "b2": "generic_cloud",
+        "swift": "generic_cloud",
+        "ftp": "server",
+        "sftp": "server",
+        "nfs": "server",
+    }
+    if remote_type in mapping:
+        return mapping[remote_type]
+
+    if "google" in remote_name:
+        return "google_drive"
+    if "smb" in remote_name:
+        return "smb"
+    if "webdav" in remote_name or "dav" in remote_name:
+        return "webdav"
+    if "onedrive" in remote_name:
+        return "onedrive"
+    if "dropbox" in remote_name:
+        return "dropbox"
+    if "s3" in remote_name:
+        return "s3"
+    return "generic_folder"
+
+
+def resolve_drive_icon_key(profile_or_key, remote_type: str | None = None, remote_name: str | None = None) -> str:
+    if isinstance(profile_or_key, dict):
+        selected = (profile_or_key.get("icon") or "auto").strip() or "auto"
+        remote_type = profile_or_key.get("remote_type", remote_type)
+        remote_name = profile_or_key.get("remote", remote_name)
+    else:
+        selected = str(profile_or_key or "auto").strip() or "auto"
+
+    if selected == "auto":
+        return infer_drive_icon_key(remote_type, remote_name)
+    return selected
+
+
+def make_drive_icon(profile_or_key, color: str, size: int = 18, remote_type: str | None = None, remote_name: str | None = None) -> QIcon:
+    icon_key = resolve_drive_icon_key(profile_or_key, remote_type=remote_type, remote_name=remote_name)
+    choice_map = {item["key"]: item["icon"] for item in get_drive_icon_choices("en")}
+    return _make_line_icon(choice_map.get(icon_key, "folder"), color, size=size)
 
 
 class DriveSettingsDialog(QDialog):
@@ -106,9 +233,24 @@ class DriveSettingsDialog(QDialog):
         super().__init__(parent)
         self.lang = lang
         self.profile = profile or {}
+        self.remote_details = []
+        self.remote_meta = {}
+        for item in remotes or []:
+            if isinstance(item, dict):
+                name = str(item.get("name", "")).strip()
+                if not name:
+                    continue
+                entry = {"name": name, "type": str(item.get("type", "")).strip()}
+            else:
+                name = str(item).strip()
+                if not name:
+                    continue
+                entry = {"name": name, "type": ""}
+            self.remote_details.append(entry)
+            self.remote_meta[name] = entry
         current_remote = str(self.profile.get("remote", "")).strip()
         blocked_remotes = {str(name).strip() for name in (used_remotes or []) if str(name).strip()}
-        self.remotes = [name for name in remotes if name == current_remote or name not in blocked_remotes]
+        self.remotes = [item["name"] for item in self.remote_details if item["name"] == current_remote or item["name"] not in blocked_remotes]
         self.used_letters = {str(letter).replace(':', '').upper() for letter in (used_letters or [])}
         self.system_used_letters = {str(letter).replace(':', '').upper() for letter in (system_used_letters or [])}
         self.setObjectName("SheetDialog")
@@ -131,6 +273,13 @@ class DriveSettingsDialog(QDialog):
         self.remote_combo.addItems(self.remotes)
         if "remote" in self.profile:
             self.remote_combo.setCurrentText(self.profile["remote"])
+
+        self.icon_combo = QComboBox()
+        for choice in get_drive_icon_choices(self.lang):
+            self.icon_combo.addItem(_make_line_icon(choice["icon"], "#5F7087", 18), choice["label"], choice["key"])
+        selected_icon = str(self.profile.get("icon", "auto")).strip() or "auto"
+        selected_index = max(0, self.icon_combo.findData(selected_icon))
+        self.icon_combo.setCurrentIndex(selected_index)
 
         self.letter_combo = QComboBox()
         current_letter = str(self.profile.get("letter", "")).replace(":", "").upper()
@@ -157,6 +306,7 @@ class DriveSettingsDialog(QDialog):
         self.auto_mount_check.setChecked(self.profile.get("auto_mount", False))
 
         form.addRow(tr(self.lang, "remote"), self.remote_combo)
+        form.addRow(tr(self.lang, "icon"), self.icon_combo)
         form.addRow(tr(self.lang, "drive"), self.letter_combo)
         form.addRow(tr(self.lang, "name"), self.vol_edit)
         form.addRow(tr(self.lang, "path"), self.root_edit)
@@ -183,6 +333,19 @@ class DriveSettingsDialog(QDialog):
         buttons.addWidget(save)
         layout.addLayout(buttons)
 
+        self.remote_combo.currentTextChanged.connect(self._on_remote_changed)
+        self._on_remote_changed(self.remote_combo.currentText())
+
+    def _on_remote_changed(self, remote_name: str):
+        if str(self.profile.get("icon", "")).strip() not in {"", "auto"}:
+            return
+        remote_type = self.remote_meta.get(remote_name, {}).get("type", "")
+        inferred = infer_drive_icon_key(remote_type, remote_name)
+        if inferred:
+            idx = self.icon_combo.findData(inferred)
+            auto_idx = self.icon_combo.findData("auto")
+            self.icon_combo.setCurrentIndex(auto_idx if auto_idx >= 0 else idx)
+
     def _validate_and_accept(self):
         remote = self.remote_combo.currentText().strip()
         root = self.root_edit.text().strip() or "/"
@@ -208,10 +371,13 @@ class DriveSettingsDialog(QDialog):
         self.accept()
 
     def get_data(self):
+        remote_name = self.remote_combo.currentText().strip()
         return {
-            "remote": self.remote_combo.currentText().strip(),
+            "remote": remote_name,
+            "remote_type": self.remote_meta.get(remote_name, {}).get("type", self.profile.get("remote_type", "")),
             "letter": self.letter_combo.currentText().replace(":", ""),
             "volname": self.vol_edit.text().strip(),
+            "icon": str(self.icon_combo.currentData() or "auto"),
             "root_folder": self.root_edit.text().strip() or "/",
             "vfs_mode": self.vfs_combo.currentText(),
             "auto_mount": self.auto_mount_check.isChecked(),
@@ -246,6 +412,10 @@ class DriveCardWidget(QFrame):
         self.status_dot.setObjectName("StatusDot")
         self.status_dot.setFixedSize(10, 10)
         layout.addWidget(self.status_dot, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        self.drive_icon_label = QLabel("")
+        self.drive_icon_label.setFixedSize(20, 20)
+        layout.addWidget(self.drive_icon_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.badge = QLabel(self.profile["letter"])
         self.badge.setObjectName("LetterBadge")
@@ -308,6 +478,10 @@ class DriveCardWidget(QFrame):
             if button.objectName() in {"AccentBtn", "DangerBtn"}:
                 color = palette["accent"]
             button.setIcon(_make_line_icon(icon_kind, color))
+
+        drive_icon = make_drive_icon(self.profile, palette["ghost"], size=18)
+        pixmap = drive_icon.pixmap(18, 18)
+        self.drive_icon_label.setPixmap(pixmap)
 
     def _on_toggle(self):
         self.toggle_requested.emit(self.profile["id"], not self.is_running)
