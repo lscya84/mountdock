@@ -192,6 +192,14 @@ class LDriveApp:
         auth_manager = GoogleAuthManager(secret_path, token_path)
         return SyncService(self.config, auth_manager)
 
+    def _handle_passphrase_cache(self, service: SyncService, remember: bool, passphrase: str):
+        if remember:
+            service.cache_passphrase(passphrase)
+            self.window.append_log(tr(self.lang, "google_sync_cache_saved"))
+        else:
+            service.clear_cached_passphrase()
+            self.window.append_log(tr(self.lang, "google_sync_cache_cleared"))
+
     def _update_google_sync_dialog_state(self, dialog: GlobalSettingsDialog):
         dialog.set_google_sync_status(
             self.config.get("google_account_email", ""),
@@ -199,17 +207,18 @@ class LDriveApp:
             self.config.get("google_sync_last_downloaded_at", ""),
         )
 
-    def _prompt_passphrase(self, title_key: str, prompt_key: str, require_confirm=False):
+    def _prompt_passphrase(self, title_key: str, prompt_key: str, require_confirm=False, remember_enabled=False):
         dialog = PassphraseDialog(
             self.lang,
             tr(self.lang, title_key),
             tr(self.lang, prompt_key),
             require_confirm=require_confirm,
+            remember_enabled=remember_enabled,
             parent=self.window,
         )
         if dialog.exec():
-            return dialog.get_passphrase()
-        return ""
+            return dialog.get_passphrase(), dialog.remember_on_device()
+        return "", False
 
     def _handle_google_sign_in(self, dialog: GlobalSettingsDialog, data):
         if not data.get("google_client_secret_path", "").strip():
@@ -242,13 +251,14 @@ class LDriveApp:
         if not data.get("google_client_secret_path", "").strip():
             QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
             return
-        passphrase = self._prompt_passphrase("passphrase_title_backup", "passphrase_prompt_backup", require_confirm=True)
+        passphrase, remember = self._prompt_passphrase("passphrase_title_backup", "passphrase_prompt_backup", require_confirm=True, remember_enabled=True)
         if not passphrase:
             return
         self._apply_settings_data(data, refresh_remotes=False)
         try:
             service = self._build_sync_service(data)
             service.backup_current_conf(passphrase, interactive=True)
+            self._handle_passphrase_cache(service, remember, passphrase)
         except SyncServiceError as exc:
             QMessageBox.critical(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_action_failed", message=str(exc)))
             return
@@ -260,13 +270,20 @@ class LDriveApp:
         if not data.get("google_client_secret_path", "").strip():
             QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
             return
-        passphrase = self._prompt_passphrase("passphrase_title_restore", "passphrase_prompt_restore", require_confirm=False)
-        if not passphrase:
-            return
         self._apply_settings_data(data, refresh_remotes=False)
         try:
             service = self._build_sync_service(data)
+            passphrase = service.load_cached_passphrase()
+            remember = False
+            if passphrase:
+                self.window.append_log(tr(self.lang, "google_sync_cached_passphrase"))
+            else:
+                passphrase, remember = self._prompt_passphrase("passphrase_title_restore", "passphrase_prompt_restore", require_confirm=False, remember_enabled=True)
+                if not passphrase:
+                    return
             result = service.restore_conf(passphrase, interactive=True)
+            if not service.load_cached_passphrase() and passphrase:
+                self._handle_passphrase_cache(service, remember, passphrase)
         except SyncServiceError as exc:
             QMessageBox.critical(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_action_failed", message=str(exc)))
             return

@@ -792,10 +792,11 @@ class RcloneUpdateDialog(QDialog):
 
 
 class PassphraseDialog(QDialog):
-    def __init__(self, lang="en", title="", prompt="", require_confirm=False, parent=None):
+    def __init__(self, lang="en", title="", prompt="", require_confirm=False, remember_enabled=False, parent=None):
         super().__init__(parent)
         self.lang = lang
         self.require_confirm = require_confirm
+        self.remember_enabled = remember_enabled
         self.setObjectName("SheetDialog")
         self.setWindowTitle(title)
         self.setFixedWidth(420)
@@ -827,6 +828,11 @@ class PassphraseDialog(QDialog):
 
         layout.addLayout(form)
 
+        self.remember_check = None
+        if self.remember_enabled:
+            self.remember_check = QCheckBox(tr(self.lang, "remember_on_device"))
+            layout.addWidget(self.remember_check)
+
         buttons = QHBoxLayout()
         buttons.addStretch()
 
@@ -856,6 +862,9 @@ class PassphraseDialog(QDialog):
 
     def get_passphrase(self) -> str:
         return self.passphrase_edit.text()
+
+    def remember_on_device(self) -> bool:
+        return bool(self.remember_check and self.remember_check.isChecked())
 
 
 class GlobalSettingsDialog(QDialog):

@@ -108,6 +108,10 @@ STRINGS = {
         "passphrase_confirm": "Confirm passphrase",
         "passphrase_required": "Passphrase is required.",
         "passphrase_mismatch": "Passphrases do not match.",
+        "remember_on_device": "Remember on this device",
+        "google_sync_cached_passphrase": "Saved passphrase from this device was used.",
+        "google_sync_cache_saved": "Passphrase saved securely on this device.",
+        "google_sync_cache_cleared": "Saved passphrase removed from this device.",
     },
     "ko": {
         "app_title": "MountDock",
@@ -218,6 +222,10 @@ STRINGS = {
         "passphrase_confirm": "패스프레이즈 확인",
         "passphrase_required": "패스프레이즈를 입력하세요.",
         "passphrase_mismatch": "패스프레이즈가 일치하지 않습니다.",
+        "remember_on_device": "이 기기에서 기억",
+        "google_sync_cached_passphrase": "이 기기에 저장된 패스프레이즈를 사용했습니다.",
+        "google_sync_cache_saved": "패스프레이즈를 이 기기에 안전하게 저장했습니다.",
+        "google_sync_cache_cleared": "이 기기에 저장된 패스프레이즈를 삭제했습니다.",
     },
 }
 
