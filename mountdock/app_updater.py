@@ -1,4 +1,7 @@
 import re
+import subprocess
+import tempfile
+from pathlib import Path
 
 import requests
 
@@ -21,11 +24,53 @@ class AppUpdater:
         response.raise_for_status()
         data = response.json()
         version = str(data.get("tag_name", "")).lstrip("v")
+        assets = data.get("assets") or []
+        installer_asset = next(
+            (
+                asset
+                for asset in assets
+                if str(asset.get("name", "")).startswith("MountDock-Setup-v")
+                and str(asset.get("name", "")).lower().endswith(".exe")
+            ),
+            None,
+        )
         return {
             "version": version,
             "url": data.get("html_url") or GITHUB_RELEASES_URL,
             "name": data.get("name", ""),
+            "installer_url": (installer_asset or {}).get("browser_download_url", ""),
+            "installer_name": (installer_asset or {}).get("name", ""),
         }
+
+    def download_installer(self, url: str, filename: str | None = None, progress_cb=None) -> Path:
+        if not url:
+            raise RuntimeError("Installer download URL is missing.")
+
+        target_dir = Path(tempfile.gettempdir()) / "MountDockUpdates"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_path = target_dir / (filename or Path(url).name or "MountDock-Setup.exe")
+
+        with requests.get(url, stream=True, timeout=self.timeout) as response:
+            response.raise_for_status()
+            total = int(response.headers.get("content-length", 0))
+            downloaded = 0
+            with open(target_path, "wb") as handle:
+                for chunk in response.iter_content(65536):
+                    if chunk:
+                        handle.write(chunk)
+                        downloaded += len(chunk)
+                        if progress_cb and total:
+                            progress_cb(min(100, int(downloaded * 100 / total)))
+
+        if progress_cb:
+            progress_cb(100)
+        return target_path
+
+    def launch_installer(self, installer_path: str | Path) -> None:
+        path = Path(installer_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Installer not found: {path}")
+        subprocess.Popen([str(path)])
 
     def get_releases_url(self) -> str:
         return GITHUB_RELEASES_URL
@@ -40,4 +85,3 @@ class AppUpdater:
             return tuple(int(x) for x in re.findall(r"\d+", value))
         except Exception:
             return (0,)
-

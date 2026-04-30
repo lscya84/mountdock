@@ -238,6 +238,7 @@ python release_installer.py
 
 - [ ] **KR** Windows에서 빌드 확인 / **EN** Confirm build on Windows
 - [ ] **KR** 설치형 EXE 생성 확인 / **EN** Verify installer EXE generation
+- [ ] **KR** 앱 내 MountDock 업데이트 확인/설치 버튼 동작 확인 / **EN** Verify in-app MountDock update check/install flow
 - [ ] **KR** 트레이 동작 확인 / **EN** Verify tray behavior
 - [ ] **KR** 시작 시 자동 마운트 확인 / **EN** Verify auto-mount on launch
 - [ ] **KR** 모두 연결 / 모두 해제 동작 확인 / **EN** Verify bulk mount / unmount actions

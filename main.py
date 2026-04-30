@@ -17,6 +17,8 @@ from mountdock.rclone_engine import RcloneEngine
 from mountdock.rclone_updater import RcloneUpdater
 from mountdock.sync_service import SyncService, SyncServiceError
 from mountdock.ui_components import (
+    AppUpdateDialog,
+    AppUpdateWorker,
     DriveCardWidget,
     DriveSettingsDialog,
     GlobalSettingsDialog,
@@ -79,6 +81,7 @@ class LDriveApp:
         self.watchers = {}
         self.remote_cache = []
         self._active_rclone_worker = None
+        self._active_app_update_worker = None
 
         self._wire_signals()
 
@@ -146,7 +149,10 @@ class LDriveApp:
         settings_data["app_update_available"] = app_version_info["update_available"]
         settings_data["app_update_tooltip"] = app_version_info["tooltip"]
         settings_data["app_download_url"] = app_version_info["download_url"]
+        settings_data["app_installer_url"] = app_version_info["installer_url"]
+        settings_data["app_installer_name"] = app_version_info["installer_name"]
         dialog = GlobalSettingsDialog(settings_data, self.lang, self.window)
+        dialog.set_app_installer_url(app_version_info["installer_url"])
         self._update_google_sync_dialog_state(dialog)
         while True:
             if not dialog.exec():
@@ -154,6 +160,10 @@ class LDriveApp:
             if dialog.check_app_update_requested:
                 dialog.check_app_update_requested = False
                 self._handle_app_update_check(dialog)
+                continue
+            if dialog.install_app_update_requested:
+                dialog.install_app_update_requested = False
+                self._handle_app_update_install(dialog)
                 continue
             if dialog.open_app_download_requested:
                 dialog.open_app_download_requested = False
@@ -709,6 +719,8 @@ class LDriveApp:
                     "installed_version": installed_version,
                     "latest_version": latest_version,
                     "download_url": download_url,
+                    "installer_url": latest_release.get("installer_url", ""),
+                    "installer_name": latest_release.get("installer_name", ""),
                 }
             return {
                 "label": tr(self.lang, "app_latest", version=installed_version),
@@ -717,6 +729,8 @@ class LDriveApp:
                 "installed_version": installed_version,
                 "latest_version": latest_version,
                 "download_url": download_url,
+                "installer_url": latest_release.get("installer_url", ""),
+                "installer_name": latest_release.get("installer_name", ""),
             }
 
         return {
@@ -726,11 +740,14 @@ class LDriveApp:
             "installed_version": installed_version,
             "latest_version": latest_version,
             "download_url": download_url,
+            "installer_url": "",
+            "installer_name": "",
         }
 
     def _handle_app_update_check(self, dialog):
         info = self._get_app_version_info()
         dialog.set_app_version_status(info["label"], info["update_available"], info["tooltip"], info["download_url"])
+        dialog.set_app_installer_url(info.get("installer_url", ""))
 
         if info["latest_version"] and info["update_available"]:
             message = tr(
@@ -739,7 +756,7 @@ class LDriveApp:
                 installed=info["installed_version"],
                 latest=info["latest_version"],
             )
-            prompt = f"{message}\n\n{tr(self.lang, 'app_update_open_prompt')}"
+            prompt = f"{message}\n\n{tr(self.lang, 'app_update_install_prompt')}"
             reply = QMessageBox.question(
                 self.window,
                 tr(self.lang, "app_update_title"),
@@ -748,7 +765,7 @@ class LDriveApp:
                 QMessageBox.StandardButton.Yes,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                self._open_app_download_page(info["download_url"])
+                self._run_app_update_download(info)
             return
 
         if info["latest_version"]:
@@ -775,6 +792,59 @@ class LDriveApp:
             webbrowser.open(url)
         except Exception as exc:
             QMessageBox.warning(self.window, tr(self.lang, "error"), str(exc))
+
+    def _handle_app_update_install(self, dialog):
+        info = self._get_app_version_info()
+        dialog.set_app_version_status(info["label"], info["update_available"], info["tooltip"], info["download_url"])
+        dialog.set_app_installer_url(info.get("installer_url", ""))
+        self._run_app_update_download(info)
+
+    def _run_app_update_download(self, info: dict):
+        installer_url = info.get("installer_url", "")
+        installer_name = info.get("installer_name", "")
+        if not installer_url:
+            QMessageBox.warning(
+                self.window,
+                tr(self.lang, "app_update_title"),
+                tr(self.lang, "app_update_installer_missing"),
+            )
+            return
+
+        update_dialog = AppUpdateDialog(info.get("installed_version", ""), info.get("latest_version", ""), self.lang, self.window)
+        worker = AppUpdateWorker(self.app_updater, installer_url, installer_name)
+        worker.progress_changed.connect(
+            lambda percent: update_dialog.status_label.setText(tr(self.lang, "app_update_progress", percent=percent))
+        )
+        worker.progress_changed.connect(update_dialog.progress.setValue)
+        worker.failed.connect(
+            lambda message: self._finish_app_update_failure(update_dialog, message)
+        )
+        worker.finished_with_result.connect(
+            lambda path: self._finish_app_update_success(update_dialog, path)
+        )
+        worker.start()
+        self._active_app_update_worker = worker
+        update_dialog.exec()
+
+    def _finish_app_update_failure(self, dialog, message: str):
+        dialog.close_btn.setEnabled(True)
+        dialog.status_label.setText(message)
+        QMessageBox.warning(self.window, tr(self.lang, "app_update_title"), message)
+
+    def _finish_app_update_success(self, dialog, installer_path: str):
+        dialog.progress.setValue(100)
+        dialog.close_btn.setEnabled(True)
+        dialog.status_label.setText(installer_path)
+        try:
+            self.app_updater.launch_installer(installer_path)
+        except Exception as exc:
+            QMessageBox.warning(self.window, tr(self.lang, "app_update_title"), str(exc))
+            return
+        QMessageBox.information(
+            self.window,
+            tr(self.lang, "app_update_title"),
+            tr(self.lang, "app_update_installer_ready", path=installer_path),
+        )
 
     def _refresh_remote_cache(self, rclone_path=None, conf_path=None):
         active_rclone_path = rclone_path or self.engine.rclone_path

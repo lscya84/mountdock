@@ -57,6 +57,8 @@ Optional:
 
 ## Final Windows verification
 
+- In-app MountDock update check works
+- In-app installer download/launch works
 - Installer launches correctly
 - Portable ZIP extracts and runs correctly
 - Tray behavior works

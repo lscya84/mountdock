@@ -734,6 +734,74 @@ class RcloneUpdateWorker(QThread):
             self.failed.emit(str(exc))
 
 
+class AppUpdateWorker(QThread):
+    progress_changed = pyqtSignal(int)
+    finished_with_result = pyqtSignal(str)
+    failed = pyqtSignal(str)
+
+    def __init__(self, updater, installer_url, installer_name=""):
+        super().__init__()
+        self.updater = updater
+        self.installer_url = installer_url
+        self.installer_name = installer_name
+
+    def run(self):
+        try:
+            result = self.updater.download_installer(
+                self.installer_url,
+                filename=self.installer_name or None,
+                progress_cb=self.progress_changed.emit,
+            )
+            self.finished_with_result.emit(str(result))
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
+class AppUpdateDialog(QDialog):
+    def __init__(self, installed_version, latest_version, lang="en", parent=None):
+        super().__init__(parent)
+        self.lang = lang
+        self.setObjectName("SheetDialog")
+        self.setWindowTitle(tr(self.lang, "app_update_title"))
+        self.setFixedWidth(420)
+        self.installed_version = installed_version or "unknown"
+        self.latest_version = latest_version or "unknown"
+        self._init_ui()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(14)
+        layout.setContentsMargins(18, 18, 18, 18)
+
+        title = QLabel(f"MountDock {self.installed_version} → {self.latest_version}")
+        title.setObjectName("CardTitle")
+        title.setWordWrap(True)
+        layout.addWidget(title)
+
+        note = QLabel(tr(self.lang, "app_update_downloading"))
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        layout.addWidget(self.progress)
+
+        self.status_label = QLabel(tr(self.lang, "app_update_starting"))
+        self.status_label.setWordWrap(True)
+        layout.addWidget(self.status_label)
+
+        self.close_btn = QPushButton(tr(self.lang, "close"))
+        self.close_btn.setObjectName("GhostBtn")
+        self.close_btn.setEnabled(False)
+        self.close_btn.clicked.connect(self.accept)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        buttons.addWidget(self.close_btn)
+        layout.addLayout(buttons)
+
+
 class RcloneUpdateDialog(QDialog):
     def __init__(self, installed_version, latest_version, lang="en", parent=None):
         super().__init__(parent)
@@ -1075,6 +1143,7 @@ class GlobalSettingsDialog(QDialog):
         self.update_rclone_requested = False
         self.check_app_update_requested = False
         self.open_app_download_requested = False
+        self.install_app_update_requested = False
         self.open_rclone_config_requested = False
         self.open_google_sync_requested = False
         self._init_ui()
@@ -1124,6 +1193,13 @@ class GlobalSettingsDialog(QDialog):
         self.app_update_check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.app_update_check_btn.clicked.connect(self._request_app_update_check)
         self.app_update_buttons.addWidget(self.app_update_check_btn)
+
+        self.app_update_install_btn = QPushButton(tr(self.lang, "app_update_install_now"))
+        self.app_update_install_btn.setObjectName("GhostBtn")
+        self.app_update_install_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.app_update_install_btn.setEnabled(bool(self.config_data.get("app_installer_url")))
+        self.app_update_install_btn.clicked.connect(self._request_app_update_install)
+        self.app_update_buttons.addWidget(self.app_update_install_btn)
 
         self.app_update_open_btn = QPushButton(tr(self.lang, "app_update_open_download"))
         self.app_update_open_btn.setObjectName("GhostBtn")
@@ -1264,6 +1340,10 @@ class GlobalSettingsDialog(QDialog):
         self.open_app_download_requested = True
         self.accept()
 
+    def _request_app_update_install(self):
+        self.install_app_update_requested = True
+        self.accept()
+
     def _request_rclone_config(self):
         self.open_rclone_config_requested = True
         self.accept()
@@ -1283,9 +1363,15 @@ class GlobalSettingsDialog(QDialog):
         self.app_version_label.setText(text)
         if tooltip is not None:
             self.app_update_check_btn.setToolTip(tooltip)
+            self.app_update_install_btn.setToolTip(tooltip)
             self.app_update_open_btn.setToolTip(tooltip)
+        self.app_update_install_btn.setEnabled(bool(self.config_data.get("app_installer_url")))
         self.app_update_open_btn.setEnabled(bool(download_url))
         self.config_data["app_download_url"] = download_url
+
+    def set_app_installer_url(self, installer_url: str = ""):
+        self.config_data["app_installer_url"] = installer_url
+        self.app_update_install_btn.setEnabled(bool(installer_url))
 
     def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None, signed_in: bool | None = None):
         effective_signed_in = bool(str(email).strip()) if signed_in is None else bool(signed_in)
