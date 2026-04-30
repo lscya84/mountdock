@@ -31,6 +31,7 @@ from mountdock.ui_components import (
     RcloneUpdateWorker,
 )
 from mountdock.watcher import LDriveWatcher
+from mountdock.windows_drive_icons import apply_drive_icon, clear_drive_icon
 
 
 class LDriveApp:
@@ -604,6 +605,42 @@ class LDriveApp:
             self.config.update_profile(pid, dialog.get_data())
             self._setup_dashboards()
 
+    def _apply_profile_drive_icon(self, profile):
+        try:
+            icon_path = apply_drive_icon(
+                self.config.get_app_dir(),
+                profile.get("letter", ""),
+                profile,
+                remote_type=profile.get("remote_type", ""),
+                remote_name=profile.get("remote", ""),
+            )
+            if icon_path:
+                self.window.append_log(f"Applied drive icon for {profile.get('letter', '?')}: {icon_path}")
+        except Exception as exc:
+            self.window.append_log(f"Drive icon apply failed: {exc}")
+
+    def _clear_profile_drive_icon(self, profile):
+        try:
+            clear_drive_icon(profile.get("letter", ""))
+        except Exception as exc:
+            self.window.append_log(f"Drive icon clear failed: {exc}")
+
+    def _handle_watcher_finished(self, pid):
+        watcher = self.watchers.get(pid)
+        if watcher is None:
+            return
+        if not watcher.isFinished():
+            return
+
+        profile = next((p for p in self.config.get_profiles() if p["id"] == pid), None)
+        self.watchers.pop(pid, None)
+        card = self._find_card(pid)
+        if card:
+            card.set_status("Disconnected")
+        if profile:
+            self._clear_profile_drive_icon(profile)
+        self._refresh_bulk_action_state()
+
     def handle_delete_drive(self, pid):
         if pid in self.watchers:
             self.handle_toggle_mount(pid, False)
@@ -650,8 +687,10 @@ class LDriveApp:
                 )
                 watcher.status_changed.connect(card.set_status)
                 watcher.log_emitted.connect(self.window.append_log)
+                watcher.finished.connect(lambda pid=pid: self._handle_watcher_finished(pid))
                 watcher.start()
                 self.watchers[pid] = watcher
+                self._apply_profile_drive_icon(profile)
                 self._refresh_bulk_action_state()
             else:
                 self.window.append_log(f"Mount Error: {self.engine.last_error}")
@@ -661,6 +700,7 @@ class LDriveApp:
                 self.watchers[pid].stop()
                 del self.watchers[pid]
             self.engine.unmount(profile["letter"])
+            self._clear_profile_drive_icon(profile)
             card.set_status("Disconnected")
             self._refresh_bulk_action_state()
 

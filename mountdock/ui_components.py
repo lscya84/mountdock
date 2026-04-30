@@ -8,7 +8,6 @@ import threading
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QTextCursor
 from PyQt6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -27,12 +26,12 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
-    QStyle,
     QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
 )
 
+from mountdock.drive_icons import build_drive_icon, infer_drive_icon_key, resolve_drive_icon_key
 from mountdock.i18n import tr
 
 
@@ -175,65 +174,6 @@ def get_drive_icon_choices(lang: str = "en"):
     ]
 
 
-def infer_drive_icon_key(remote_type: str | None, remote_name: str | None = None) -> str:
-    remote_type = (remote_type or "").strip().lower()
-    remote_name = (remote_name or "").strip().lower()
-
-    mapping = {
-        "drive": "google_drive",
-        "google cloud storage": "generic_cloud",
-        "smb": "smb",
-        "webdav": "webdav",
-        "onedrive": "onedrive",
-        "dropbox": "dropbox",
-        "s3": "s3",
-        "b2": "generic_cloud",
-        "swift": "generic_cloud",
-        "ftp": "server",
-        "sftp": "server",
-        "nfs": "server",
-    }
-    if remote_type in mapping:
-        return mapping[remote_type]
-
-    if "google" in remote_name:
-        return "google_drive"
-    if "smb" in remote_name:
-        return "smb"
-    if "webdav" in remote_name or "dav" in remote_name:
-        return "webdav"
-    if "onedrive" in remote_name:
-        return "onedrive"
-    if "dropbox" in remote_name:
-        return "dropbox"
-    if "s3" in remote_name:
-        return "s3"
-    return "generic_folder"
-
-
-def resolve_drive_icon_key(profile_or_key, remote_type: str | None = None, remote_name: str | None = None) -> str:
-    if isinstance(profile_or_key, dict):
-        selected = (profile_or_key.get("icon") or "auto").strip() or "auto"
-        remote_type = profile_or_key.get("remote_type", remote_type)
-        remote_name = profile_or_key.get("remote", remote_name)
-    else:
-        selected = str(profile_or_key or "auto").strip() or "auto"
-
-    if selected == "auto":
-        return infer_drive_icon_key(remote_type, remote_name)
-    return selected
-
-
-def _get_standard_icon(pixmap_name, size: int = 18) -> QIcon:
-    app = QApplication.instance()
-    if app is None or app.style() is None:
-        return QIcon()
-    try:
-        return app.style().standardIcon(pixmap_name)
-    except Exception:
-        return QIcon()
-
-
 def make_drive_icon(
     profile_or_key,
     color: str,
@@ -242,29 +182,13 @@ def make_drive_icon(
     remote_name: str | None = None,
     mounted: bool = False,
 ) -> QIcon:
-    if mounted:
-        icon = _get_standard_icon(QStyle.StandardPixmap.SP_DriveHDIcon, size=size)
-        if not icon.isNull():
-            return icon
-        return _make_line_icon("server", color, size=size)
-
-    icon_key = resolve_drive_icon_key(profile_or_key, remote_type=remote_type, remote_name=remote_name)
-    standard_map = {
-        "google_drive": QStyle.StandardPixmap.SP_DriveNetIcon,
-        "smb": QStyle.StandardPixmap.SP_DriveNetIcon,
-        "webdav": QStyle.StandardPixmap.SP_DriveNetIcon,
-        "onedrive": QStyle.StandardPixmap.SP_DriveNetIcon,
-        "dropbox": QStyle.StandardPixmap.SP_DriveNetIcon,
-        "s3": QStyle.StandardPixmap.SP_DriveNetIcon,
-        "generic_cloud": QStyle.StandardPixmap.SP_DriveNetIcon,
-        "generic_folder": QStyle.StandardPixmap.SP_DirIcon,
-    }
-    standard_icon = _get_standard_icon(standard_map.get(icon_key, QStyle.StandardPixmap.SP_DirIcon), size=size)
-    if not standard_icon.isNull():
-        return standard_icon
-
-    choice_map = {item["key"]: item["icon"] for item in get_drive_icon_choices("en")}
-    return _make_line_icon(choice_map.get(icon_key, "folder"), color, size=size)
+    return build_drive_icon(
+        profile_or_key,
+        size=size,
+        mounted=mounted,
+        remote_type=remote_type,
+        remote_name=remote_name,
+    )
 
 
 class DriveSettingsDialog(QDialog):
@@ -315,7 +239,7 @@ class DriveSettingsDialog(QDialog):
 
         self.icon_combo = QComboBox()
         for choice in get_drive_icon_choices(self.lang):
-            self.icon_combo.addItem(_make_line_icon(choice["icon"], "#5F7087", 18), choice["label"], choice["key"])
+            self.icon_combo.addItem(make_drive_icon(choice["key"], "#5F7087", 18), choice["label"], choice["key"])
         selected_icon = str(self.profile.get("icon", "auto")).strip() or "auto"
         selected_index = max(0, self.icon_combo.findData(selected_icon))
         self.icon_combo.setCurrentIndex(selected_index)
