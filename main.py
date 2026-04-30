@@ -1,6 +1,7 @@
 import ctypes
 import os
 import sys
+from pathlib import Path
 
 from PyQt6.QtCore import QSharedMemory, Qt
 from PyQt6.QtGui import QIcon
@@ -206,6 +207,7 @@ class LDriveApp:
             self.config.get("google_sync_last_uploaded_at", ""),
             self.config.get("google_sync_last_downloaded_at", ""),
             self.config.resolve_rclone_conf_path() or self.config.get("rclone_conf_path", ""),
+            self.config.resolve_google_token_path(),
         )
 
     def _prompt_passphrase(self, title_key: str, prompt_key: str, require_confirm=False, remember_enabled=False):
@@ -221,9 +223,19 @@ class LDriveApp:
             return dialog.get_passphrase(), dialog.remember_on_device()
         return "", False
 
-    def _handle_google_sign_in(self, dialog: GlobalSettingsDialog, data):
-        if not data.get("google_client_secret_path", "").strip():
+    def _validate_google_client_secret(self, data) -> bool:
+        raw = data.get("google_client_secret_path", "").strip()
+        if not raw:
             QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
+            return False
+        resolved = self.config.resolve_google_client_secret_path(raw)
+        if not resolved or not Path(resolved).exists():
+            QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_secret_missing"))
+            return False
+        return True
+
+    def _handle_google_sign_in(self, dialog: GlobalSettingsDialog, data):
+        if not self._validate_google_client_secret(data):
             return
         self._apply_settings_data(data, refresh_remotes=False)
         try:
@@ -249,8 +261,7 @@ class LDriveApp:
         QMessageBox.information(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_signout_ok"))
 
     def _handle_google_backup(self, dialog: GlobalSettingsDialog, data):
-        if not data.get("google_client_secret_path", "").strip():
-            QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
+        if not self._validate_google_client_secret(data):
             return
         passphrase, remember = self._prompt_passphrase("passphrase_title_backup", "passphrase_prompt_backup", require_confirm=True, remember_enabled=True)
         if not passphrase:
@@ -268,8 +279,7 @@ class LDriveApp:
         QMessageBox.information(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_backup_ok"))
 
     def _handle_google_restore(self, dialog: GlobalSettingsDialog, data):
-        if not data.get("google_client_secret_path", "").strip():
-            QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
+        if not self._validate_google_client_secret(data):
             return
         self._apply_settings_data(data, refresh_remotes=False)
         try:
