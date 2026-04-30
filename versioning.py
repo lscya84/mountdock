@@ -5,16 +5,18 @@ import subprocess
 from pathlib import Path
 
 
-def _detect_version(default: str = "0.0.0") -> str:
+ROOT = Path(__file__).resolve().parent
+
+
+def resolve_version(default: str = "0.0.0") -> str:
     env_version = os.environ.get("MOUNTDOCK_VERSION", "").strip()
     if env_version:
         return env_version.removeprefix("v")
 
-    root = Path(__file__).resolve().parent.parent
     try:
         result = subprocess.run(
             ["git", "describe", "--tags", "--abbrev=0"],
-            cwd=root,
+            cwd=ROOT,
             check=True,
             capture_output=True,
             text=True,
@@ -27,5 +29,3 @@ def _detect_version(default: str = "0.0.0") -> str:
 
     return default
 
-
-__version__ = _detect_version()

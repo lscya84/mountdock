@@ -37,7 +37,8 @@ release_windows.bat v0.1.4
 - `release_installer.py` requires **Inno Setup 6** on Windows.
 - Installer packaging wraps the stable `onedir` output rather than replacing it.
 - If needed, set a custom Inno Setup compiler path with `INNO_SETUP_COMPILER`.
-- If no version is passed to `release_installer.py`, it tries the latest git tag, then falls back to `0.0.0`.
+- If no version is passed explicitly, version resolution uses `MOUNTDOCK_VERSION`, then the latest git tag, then falls back to `0.0.0`.
+- `build.py` also injects that resolved version into the packaged app, so the in-app update checker reports the same release version.
 
 ---
 

@@ -4,15 +4,32 @@ import sys
 import argparse
 from pathlib import Path
 
+from versioning import resolve_version
+
 
 DATA_SEPARATOR = ";" if os.name == "nt" else ":"
 ROOT = Path(__file__).resolve().parent
 
 
+def create_version_runtime_hook(version: str) -> Path:
+    hook_dir = ROOT / "build"
+    hook_dir.mkdir(parents=True, exist_ok=True)
+    hook_path = hook_dir / "mountdock_version_hook.py"
+    hook_path.write_text(
+        "import os\n"
+        f"os.environ['MOUNTDOCK_VERSION'] = {version!r}\n",
+        encoding="utf-8",
+    )
+    return hook_path
+
+
 def build_exe(mode: str = "onedir"):
     import PyInstaller.__main__
 
+    version = resolve_version()
+    runtime_hook = create_version_runtime_hook(version)
     print(f"빌드를 시작합니다. mode={mode}")
+    print(f"앱 버전: {version}")
 
     entry_point = str(ROOT / "main.py")
     icon_path = ROOT / "assets" / "icon.ico"
@@ -29,6 +46,7 @@ def build_exe(mode: str = "onedir"):
         "--clean",
         f"--workpath={ROOT / 'build'}",
         f"--distpath={ROOT / 'dist'}",
+        f"--runtime-hook={runtime_hook}",
     ]
 
     if mode == "onefile":

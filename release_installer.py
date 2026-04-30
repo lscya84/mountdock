@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from versioning import resolve_version
+
 
 ROOT = Path(__file__).resolve().parent
 DIST_DIR = ROOT / "dist"
@@ -13,29 +15,6 @@ APP_DIR = DIST_DIR / "MountDock"
 RELEASE_DIR = DIST_DIR / "release"
 INSTALLER_DIR = ROOT / "installer"
 ISS_FILE = INSTALLER_DIR / "MountDock.iss"
-
-
-def detect_version() -> str:
-    env_version = os.environ.get("MOUNTDOCK_VERSION", "").strip()
-    if env_version:
-        return env_version.removeprefix("v")
-
-    try:
-        result = subprocess.run(
-            ["git", "describe", "--tags", "--abbrev=0"],
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        tag = result.stdout.strip()
-        if tag:
-            return tag.removeprefix("v")
-    except Exception:
-        pass
-
-    return "0.0.0"
-
 
 def locate_iscc() -> str:
     candidates = []
@@ -70,7 +49,7 @@ def main() -> None:
     if not ISS_FILE.exists():
         raise SystemExit(f"인스톨러 스크립트를 찾을 수 없습니다: {ISS_FILE}")
 
-    version = sys.argv[1].removeprefix("v") if len(sys.argv) > 1 else detect_version()
+    version = sys.argv[1].removeprefix("v") if len(sys.argv) > 1 else resolve_version()
     iscc = locate_iscc()
 
     RELEASE_DIR.mkdir(parents=True, exist_ok=True)

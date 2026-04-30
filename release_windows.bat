@@ -16,6 +16,7 @@ if "%VERSION%"=="" (
 )
 
 set VERSION=%VERSION:v=%
+set MOUNTDOCK_VERSION=%VERSION%
 
 echo [1/4] Installing/updating dependencies...
 if not exist ".venv\Scripts\python.exe" (
