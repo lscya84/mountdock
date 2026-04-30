@@ -126,21 +126,24 @@ MountDock은 Google Drive `appDataFolder`를 이용해 `rclone.conf`를 **암호
 
 기본 흐름:
 1. 설정에서 **OAuth client JSON** 파일 선택
-2. **Google 로그인** 클릭
-3. **암호화된 rclone.conf 백업** 클릭
-4. 패스프레이즈 입력 및 필요 시 “이 기기에서 기억” 선택
-5. 다른 기기에서는 **Google Drive에서 복원** 클릭
+2. MountDock이 해당 JSON을 앱 내부 관리 폴더로 복사
+3. **Google 로그인** 클릭
+4. **암호화된 rclone.conf 백업** 클릭
+5. 패스프레이즈 입력 및 필요 시 “이 기기에서 기억” 선택
+6. 다른 기기에서는 **Google Drive에서 복원** 클릭
 
 보안 주의:
 - Google 로그인 자체는 복호화 키가 아닙니다
 - 복호화는 패스프레이즈가 있어야 가능합니다
 - Drive에는 평문 `rclone.conf`를 저장하지 않습니다
 - 기존 로컬 `rclone.conf`가 있으면 복원 전에 `.bak-YYYYMMDD-HHMMSS` 백업을 만듭니다
+- OAuth client JSON과 `rclone.conf`는 앱 내부 관리 폴더(`.mountdock/`)에 복사되어 관리될 수 있습니다
 
 Google OAuth 설정 메모:
 - Google Cloud에서 **Desktop app** 유형 OAuth client를 생성하는 것이 가장 간단합니다
 - Google Drive API를 활성화해야 합니다
 - MountDock 설정에서 해당 **client secret JSON** 파일을 선택해야 합니다
+- 선택한 JSON은 MountDock 내부 관리 경로에 복사되어 이후 로그인 지속성에 사용됩니다
 - 토큰은 앱 로컬 경로에 캐시되며, 설정창에서 토큰 캐시 경로를 확인할 수 있습니다
 
 문제 해결:
@@ -183,9 +186,10 @@ Google OAuth setup notes:
 - tokens are cached locally by the app, and the token cache path is shown in Settings
 
 Troubleshooting:
-- if sign-in fails immediately, first check that the selected client JSON path actually exists
+- if sign-in fails immediately, first check that the selected client JSON was imported correctly into the app-managed folder
 - before restoring, you can use **Check backup** to see whether an encrypted backup exists for the current Google account
 - when restoring over an existing `rclone.conf`, MountDock creates a local backup automatically
+- restoring now targets the app-managed `rclone.conf` path by default so the app keeps using the restored file consistently
 
 ---
 
@@ -221,8 +225,10 @@ python release_portable.py
 - [ ] **KR** 언어 전환 확인 / **EN** Verify language switching
 - [ ] **KR** rclone 업데이트 모달 확인 / **EN** Verify rclone updater behavior
 - [ ] **KR** 포터블 경로 동작 확인 / **EN** Verify portable path behavior
+- [ ] **KR** Google OAuth client JSON 선택 시 `.mountdock/google_client_secret.json`로 가져오는지 확인 / **EN** Verify selected Google OAuth client JSON is imported into `.mountdock/google_client_secret.json`
 - [ ] **KR** Google OAuth client JSON 선택 후 로그인 확인 / **EN** Verify Google sign-in after selecting OAuth client JSON
 - [ ] **KR** 암호화 백업 업로드 확인 / **EN** Verify encrypted backup upload
+- [ ] **KR** `rclone.conf` 선택 또는 복원 시 `.mountdock/rclone.conf`를 사용하도록 고정되는지 확인 / **EN** Verify selected/restored `rclone.conf` is managed via `.mountdock/rclone.conf`
 - [ ] **KR** 다른 경로에 기존 `rclone.conf`가 있을 때 백업 후 복원 확인 / **EN** Verify restore creates a backup when local `rclone.conf` already exists
 - [ ] **KR** “이 기기에서 기억” 체크 후 재복원 시 저장된 패스프레이즈 사용 확인 / **EN** Verify remembered-on-device passphrase is reused on later restore
 - [ ] **KR** 로그아웃 시 로컬 저장 패스프레이즈 정리 확인 / **EN** Verify sign-out clears the locally saved passphrase
