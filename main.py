@@ -7,15 +7,18 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
 
 from mountdock.config_manager import ConfigManager
+from mountdock.google_auth import GoogleAuthManager
 from mountdock.i18n import tr
 from mountdock.rclone_engine import RcloneEngine
 from mountdock.rclone_updater import RcloneUpdater
+from mountdock.sync_service import SyncService, SyncServiceError
 from mountdock.ui_components import (
     DriveCardWidget,
     DriveSettingsDialog,
     GlobalSettingsDialog,
     LDriveMainWindow,
     LDriveTrayIcon,
+    PassphraseDialog,
     RcloneConfigDialog,
     RcloneUpdateDialog,
     RcloneUpdateWorker,
@@ -145,23 +148,140 @@ class LDriveApp:
                 dialog.open_rclone_config_requested = False
                 self._handle_rclone_config(data)
                 continue
+            if dialog.google_sign_in_requested:
+                dialog.google_sign_in_requested = False
+                self._handle_google_sign_in(dialog, data)
+                continue
+            if dialog.google_sign_out_requested:
+                dialog.google_sign_out_requested = False
+                self._handle_google_sign_out(dialog, data)
+                continue
+            if dialog.google_backup_requested:
+                dialog.google_backup_requested = False
+                self._handle_google_backup(dialog, data)
+                continue
+            if dialog.google_restore_requested:
+                dialog.google_restore_requested = False
+                self._handle_google_restore(dialog, data)
+                continue
 
-            for key, value in data.items():
-                if key == "auto_start":
-                    self.config.set_auto_start(value)
-                else:
-                    self.config.set(key, value)
-            self.lang = data.get("language", self.lang)
-            self.window.set_language(self.lang)
-            self.tray.lang = self.lang
-            self.engine.set_paths(
-                self.config.resolve_rclone_path(data["rclone_path"]),
-                self.config.resolve_rclone_conf_path(data["rclone_conf_path"]),
-            )
-            self._refresh_remote_cache()
+            self._apply_settings_data(data, refresh_remotes=True)
             self.window.append_log(tr(self.lang, "settings_saved"))
             self._setup_dashboards()
             return
+
+    def _apply_settings_data(self, data, refresh_remotes=True):
+        for key, value in data.items():
+            if key == "auto_start":
+                self.config.set_auto_start(value)
+            else:
+                self.config.set(key, value)
+        self.lang = data.get("language", self.lang)
+        self.window.set_language(self.lang)
+        self.tray.lang = self.lang
+        self.engine.set_paths(
+            self.config.resolve_rclone_path(data["rclone_path"]),
+            self.config.resolve_rclone_conf_path(data["rclone_conf_path"]),
+        )
+        if refresh_remotes:
+            self._refresh_remote_cache()
+
+    def _build_sync_service(self, data=None):
+        secret_path = self.config.resolve_google_client_secret_path((data or {}).get("google_client_secret_path"))
+        token_path = self.config.resolve_google_token_path()
+        auth_manager = GoogleAuthManager(secret_path, token_path)
+        return SyncService(self.config, auth_manager)
+
+    def _update_google_sync_dialog_state(self, dialog: GlobalSettingsDialog):
+        dialog.set_google_sync_status(
+            self.config.get("google_account_email", ""),
+            self.config.get("google_sync_last_uploaded_at", ""),
+            self.config.get("google_sync_last_downloaded_at", ""),
+        )
+
+    def _prompt_passphrase(self, title_key: str, prompt_key: str, require_confirm=False):
+        dialog = PassphraseDialog(
+            self.lang,
+            tr(self.lang, title_key),
+            tr(self.lang, prompt_key),
+            require_confirm=require_confirm,
+            parent=self.window,
+        )
+        if dialog.exec():
+            return dialog.get_passphrase()
+        return ""
+
+    def _handle_google_sign_in(self, dialog: GlobalSettingsDialog, data):
+        if not data.get("google_client_secret_path", "").strip():
+            QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
+            return
+        self._apply_settings_data(data, refresh_remotes=False)
+        try:
+            service = self._build_sync_service(data)
+            service.sign_in(interactive=True)
+        except SyncServiceError as exc:
+            QMessageBox.critical(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_action_failed", message=str(exc)))
+            return
+        self._update_google_sync_dialog_state(dialog)
+        self.window.append_log(tr(self.lang, "google_sync_signin_ok"))
+        QMessageBox.information(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_signin_ok"))
+
+    def _handle_google_sign_out(self, dialog: GlobalSettingsDialog, data):
+        self._apply_settings_data(data, refresh_remotes=False)
+        try:
+            service = self._build_sync_service(data)
+            service.sign_out()
+        except SyncServiceError as exc:
+            QMessageBox.critical(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_action_failed", message=str(exc)))
+            return
+        self._update_google_sync_dialog_state(dialog)
+        self.window.append_log(tr(self.lang, "google_sync_signout_ok"))
+        QMessageBox.information(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_signout_ok"))
+
+    def _handle_google_backup(self, dialog: GlobalSettingsDialog, data):
+        if not data.get("google_client_secret_path", "").strip():
+            QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
+            return
+        passphrase = self._prompt_passphrase("passphrase_title_backup", "passphrase_prompt_backup", require_confirm=True)
+        if not passphrase:
+            return
+        self._apply_settings_data(data, refresh_remotes=False)
+        try:
+            service = self._build_sync_service(data)
+            service.backup_current_conf(passphrase, interactive=True)
+        except SyncServiceError as exc:
+            QMessageBox.critical(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_action_failed", message=str(exc)))
+            return
+        self._update_google_sync_dialog_state(dialog)
+        self.window.append_log(tr(self.lang, "google_sync_backup_ok"))
+        QMessageBox.information(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_backup_ok"))
+
+    def _handle_google_restore(self, dialog: GlobalSettingsDialog, data):
+        if not data.get("google_client_secret_path", "").strip():
+            QMessageBox.warning(self.window, tr(self.lang, "error"), tr(self.lang, "google_sync_no_secret"))
+            return
+        passphrase = self._prompt_passphrase("passphrase_title_restore", "passphrase_prompt_restore", require_confirm=False)
+        if not passphrase:
+            return
+        self._apply_settings_data(data, refresh_remotes=False)
+        try:
+            service = self._build_sync_service(data)
+            result = service.restore_conf(passphrase, interactive=True)
+        except SyncServiceError as exc:
+            QMessageBox.critical(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_action_failed", message=str(exc)))
+            return
+
+        self.engine.set_paths(
+            self.config.resolve_rclone_path(),
+            self.config.resolve_rclone_conf_path(),
+        )
+        self._refresh_remote_cache()
+        self._update_google_sync_dialog_state(dialog)
+        self.window.append_log(tr(self.lang, "google_sync_restore_ok"))
+        message = tr(self.lang, "google_sync_restore_ok")
+        if result.get("backup_path"):
+            message = message + "\n\n" + tr(self.lang, "google_sync_restore_backup", path=result["backup_path"])
+        QMessageBox.information(self.window, tr(self.lang, "google_sync"), message)
 
     def _setup_dashboards(self):
         self.window.clear_cards()
