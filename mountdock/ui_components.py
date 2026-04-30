@@ -881,6 +881,7 @@ class GlobalSettingsDialog(QDialog):
         self.google_sign_out_requested = False
         self.google_backup_requested = False
         self.google_restore_requested = False
+        self.google_check_backup_requested = False
         self._init_ui()
 
     def _init_ui(self):
@@ -939,6 +940,10 @@ class GlobalSettingsDialog(QDialog):
         self.google_sync_backup_label.setWordWrap(True)
         layout.addWidget(self.google_sync_backup_label)
 
+        self.google_sync_backup_presence_label = QLabel("")
+        self.google_sync_backup_presence_label.setWordWrap(True)
+        layout.addWidget(self.google_sync_backup_presence_label)
+
         self.google_sync_restore_label = QLabel("")
         self.google_sync_restore_label.setWordWrap(True)
         layout.addWidget(self.google_sync_restore_label)
@@ -973,10 +978,16 @@ class GlobalSettingsDialog(QDialog):
         self.google_restore_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.google_restore_btn.clicked.connect(self._request_google_restore)
 
+        self.google_check_backup_btn = QPushButton(tr(self.lang, "google_check_backup"))
+        self.google_check_backup_btn.setObjectName("GhostBtn")
+        self.google_check_backup_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.google_check_backup_btn.clicked.connect(self._request_google_check_backup)
+
         google_row.addWidget(self.google_sign_in_btn)
         google_row.addWidget(self.google_sign_out_btn)
         google_row.addWidget(self.google_backup_btn)
         google_row.addWidget(self.google_restore_btn)
+        google_row.addWidget(self.google_check_backup_btn)
         layout.addLayout(google_row)
 
         self.auto_start_check = QCheckBox(tr(self.lang, "auto_start"))
@@ -1098,6 +1109,10 @@ class GlobalSettingsDialog(QDialog):
         self.google_restore_requested = True
         self.accept()
 
+    def _request_google_check_backup(self):
+        self.google_check_backup_requested = True
+        self.accept()
+
     def set_rclone_version_status(self, text: str, update_available=None, tooltip=None):
         self.rclone_version_label.setText(text)
         if update_available is not None:
@@ -1105,7 +1120,7 @@ class GlobalSettingsDialog(QDialog):
         if tooltip is not None:
             self.rclone_update_btn.setToolTip(tooltip)
 
-    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = ""):
+    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None):
         signed_in = bool(str(email).strip())
         self.google_sync_status_label.setText(
             tr(self.lang, "google_sync_status_signed_in", email=email)
@@ -1113,6 +1128,9 @@ class GlobalSettingsDialog(QDialog):
         )
         self.google_sync_backup_label.setText(
             tr(self.lang, "google_sync_last_upload", value=last_uploaded) if last_uploaded else ""
+        )
+        self.google_sync_backup_presence_label.setText(
+            tr(self.lang, "google_backup_exists") if backup_exists is True else (tr(self.lang, "google_backup_missing") if backup_exists is False else "")
         )
         self.google_sync_restore_label.setText(
             tr(self.lang, "google_sync_last_restore", value=last_downloaded) if last_downloaded else ""
@@ -1127,6 +1145,7 @@ class GlobalSettingsDialog(QDialog):
         self.google_sign_out_btn.setEnabled(signed_in)
         self.google_backup_btn.setEnabled(True)
         self.google_restore_btn.setEnabled(True)
+        self.google_check_backup_btn.setEnabled(True)
 
     def get_data(self):
         return {

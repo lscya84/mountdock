@@ -165,6 +165,10 @@ class LDriveApp:
                 dialog.google_restore_requested = False
                 self._handle_google_restore(dialog, data)
                 continue
+            if dialog.google_check_backup_requested:
+                dialog.google_check_backup_requested = False
+                self._handle_google_check_backup(dialog, data)
+                continue
 
             self._apply_settings_data(data, refresh_remotes=True)
             self.window.append_log(tr(self.lang, "settings_saved"))
@@ -201,13 +205,14 @@ class LDriveApp:
             service.clear_cached_passphrase()
             self.window.append_log(tr(self.lang, "google_sync_cache_cleared"))
 
-    def _update_google_sync_dialog_state(self, dialog: GlobalSettingsDialog):
+    def _update_google_sync_dialog_state(self, dialog: GlobalSettingsDialog, backup_exists=None):
         dialog.set_google_sync_status(
             self.config.get("google_account_email", ""),
             self.config.get("google_sync_last_uploaded_at", ""),
             self.config.get("google_sync_last_downloaded_at", ""),
             self.config.resolve_rclone_conf_path() or self.config.get("rclone_conf_path", ""),
             self.config.resolve_google_token_path(),
+            backup_exists,
         )
 
     def _prompt_passphrase(self, title_key: str, prompt_key: str, require_confirm=False, remember_enabled=False):
@@ -277,6 +282,20 @@ class LDriveApp:
         self._update_google_sync_dialog_state(dialog)
         self.window.append_log(tr(self.lang, "google_sync_backup_ok"))
         QMessageBox.information(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_backup_ok"))
+
+    def _handle_google_check_backup(self, dialog: GlobalSettingsDialog, data):
+        if not self._validate_google_client_secret(data):
+            return
+        self._apply_settings_data(data, refresh_remotes=False)
+        try:
+            service = self._build_sync_service(data)
+            exists = service.has_remote_backup(interactive=True)
+        except SyncServiceError as exc:
+            QMessageBox.critical(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_sync_action_failed", message=str(exc)))
+            return
+        self._update_google_sync_dialog_state(dialog, backup_exists=exists)
+        self.window.append_log(tr(self.lang, "google_backup_exists") if exists else tr(self.lang, "google_backup_missing"))
+        QMessageBox.information(self.window, tr(self.lang, "google_sync"), tr(self.lang, "google_backup_exists") if exists else tr(self.lang, "google_backup_missing"))
 
     def _handle_google_restore(self, dialog: GlobalSettingsDialog, data):
         if not self._validate_google_client_secret(data):
