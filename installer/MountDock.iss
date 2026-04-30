@@ -34,8 +34,8 @@ UninstallDisplayIcon={app}\MountDock.exe
 ChangesAssociations=no
 OutputDir={#OutputDir}
 OutputBaseFilename={#OutputBaseFilename}
-SetupIconFile=assets\icon.ico
-LicenseFile=LICENSE
+SetupIconFile=..\assets\icon.ico
+LicenseFile=..\LICENSE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
