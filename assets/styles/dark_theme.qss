@@ -147,6 +147,7 @@ QLabel#WarningBanner {
 QCheckBox {
     spacing: 8px;
     color: #e4edf7;
+    background: transparent;
 }
 
 QCheckBox::indicator {
