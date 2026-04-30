@@ -9,7 +9,11 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 APPDATA_SCOPE = "https://www.googleapis.com/auth/drive.appdata"
-DEFAULT_SCOPES = [APPDATA_SCOPE]
+DEFAULT_SCOPES = [
+    APPDATA_SCOPE,
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+]
 
 
 class GoogleAuthError(Exception):
@@ -41,14 +45,15 @@ class GoogleAuthManager:
 
     def get_valid_credentials(self, interactive: bool = False) -> Credentials:
         creds = self.load_credentials()
-        if creds and creds.valid:
+        if creds and creds.valid and self._has_required_scopes(creds):
             return creds
 
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
                 self.save_credentials(creds)
-                return creds
+                if self._has_required_scopes(creds):
+                    return creds
             except Exception as exc:
                 if not interactive:
                     raise GoogleAuthError(f"Failed to refresh Google token: {exc}") from exc
@@ -80,6 +85,12 @@ class GoogleAuthManager:
         except Exception as exc:
             raise GoogleAuthError(f"Failed to clear Google token: {exc}") from exc
 
+    def has_cached_credentials(self) -> bool:
+        try:
+            return self.load_credentials() is not None
+        except GoogleAuthError:
+            return False
+
     def get_account_email(self, creds: Credentials | None = None) -> str:
         creds = creds or self.load_credentials()
         if not creds:
@@ -105,3 +116,9 @@ class GoogleAuthManager:
             return json.loads(decoded.decode("utf-8"))
         except Exception:
             return {}
+
+    def _has_required_scopes(self, creds: Credentials) -> bool:
+        try:
+            return creds.has_scopes(self.scopes)
+        except Exception:
+            return True

@@ -138,6 +138,7 @@ class LDriveApp:
         settings_data["rclone_update_available"] = version_info["update_available"]
         settings_data["rclone_update_tooltip"] = version_info["tooltip"]
         dialog = GlobalSettingsDialog(settings_data, self.lang, self.window)
+        self._update_google_sync_dialog_state(dialog)
         while True:
             if not dialog.exec():
                 return
@@ -191,6 +192,12 @@ class LDriveApp:
             self.window.append_log(tr(self.lang, "google_sync_cache_cleared"))
 
     def _update_google_sync_dialog_state(self, dialog: GlobalSettingsDialog, backup_exists=None):
+        signed_in = False
+        try:
+            service = self._build_sync_service()
+            signed_in = service.auth.has_cached_credentials() or bool(self.config.get("google_sync_enabled", False))
+        except Exception:
+            signed_in = bool(self.config.get("google_sync_enabled", False))
         dialog.set_google_sync_status(
             self.config.get("google_account_email", ""),
             self.config.get("google_sync_last_uploaded_at", ""),
@@ -198,6 +205,7 @@ class LDriveApp:
             self.config.resolve_rclone_conf_path() or self.config.get("rclone_conf_path", ""),
             self.config.resolve_google_token_path(),
             backup_exists,
+            signed_in,
         )
 
     def _prompt_passphrase(self, title_key: str, prompt_key: str, require_confirm=False, remember_enabled=False):

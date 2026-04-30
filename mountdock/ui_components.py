@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -874,7 +875,7 @@ class GoogleSyncDialog(QDialog):
         self.config_data = config_data
         self.setObjectName("SheetDialog")
         self.setWindowTitle(tr(self.lang, "google_sync"))
-        self.setFixedWidth(520)
+        self.setFixedWidth(620)
         self.google_sign_in_requested = False
         self.google_sign_out_requested = False
         self.google_backup_requested = False
@@ -920,8 +921,9 @@ class GoogleSyncDialog(QDialog):
         self.google_sync_token_label.setWordWrap(True)
         layout.addWidget(self.google_sync_token_label)
 
-        google_row = QHBoxLayout()
-        google_row.setSpacing(6)
+        google_grid = QGridLayout()
+        google_grid.setHorizontalSpacing(8)
+        google_grid.setVerticalSpacing(8)
         self.google_sign_in_btn = QPushButton(tr(self.lang, "google_sign_in"))
         self.google_sign_in_btn.setObjectName("GhostBtn")
         self.google_sign_in_btn.clicked.connect(self._request_google_sign_in)
@@ -930,11 +932,11 @@ class GoogleSyncDialog(QDialog):
         self.google_sign_out_btn.setObjectName("GhostBtn")
         self.google_sign_out_btn.clicked.connect(self._request_google_sign_out)
 
-        self.google_backup_btn = QPushButton(tr(self.lang, "google_backup_conf"))
+        self.google_backup_btn = QPushButton(tr(self.lang, "google_backup_conf_button"))
         self.google_backup_btn.setObjectName("GhostBtn")
         self.google_backup_btn.clicked.connect(self._request_google_backup)
 
-        self.google_restore_btn = QPushButton(tr(self.lang, "google_restore_conf"))
+        self.google_restore_btn = QPushButton(tr(self.lang, "google_restore_conf_button"))
         self.google_restore_btn.setObjectName("GhostBtn")
         self.google_restore_btn.clicked.connect(self._request_google_restore)
 
@@ -942,12 +944,21 @@ class GoogleSyncDialog(QDialog):
         self.google_check_backup_btn.setObjectName("GhostBtn")
         self.google_check_backup_btn.clicked.connect(self._request_google_check_backup)
 
-        google_row.addWidget(self.google_sign_in_btn)
-        google_row.addWidget(self.google_sign_out_btn)
-        google_row.addWidget(self.google_backup_btn)
-        google_row.addWidget(self.google_restore_btn)
-        google_row.addWidget(self.google_check_backup_btn)
-        layout.addLayout(google_row)
+        for button in (
+            self.google_sign_in_btn,
+            self.google_sign_out_btn,
+            self.google_backup_btn,
+            self.google_restore_btn,
+            self.google_check_backup_btn,
+        ):
+            button.setMinimumHeight(44)
+
+        google_grid.addWidget(self.google_sign_in_btn, 0, 0)
+        google_grid.addWidget(self.google_sign_out_btn, 0, 1)
+        google_grid.addWidget(self.google_backup_btn, 1, 0)
+        google_grid.addWidget(self.google_restore_btn, 1, 1)
+        google_grid.addWidget(self.google_check_backup_btn, 2, 0, 1, 2)
+        layout.addLayout(google_grid)
 
         buttons = QHBoxLayout()
         buttons.addStretch()
@@ -1016,12 +1027,15 @@ class GoogleSyncDialog(QDialog):
         self.google_check_backup_requested = True
         self.accept()
 
-    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None):
-        signed_in = bool(str(email).strip())
-        self.google_sync_status_label.setText(
-            tr(self.lang, "google_sync_status_signed_in", email=email)
-            if signed_in else tr(self.lang, "google_sync_status_signed_out")
-        )
+    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None, signed_in: bool | None = None):
+        effective_signed_in = bool(str(email).strip()) if signed_in is None else bool(signed_in)
+        if effective_signed_in and str(email).strip():
+            status_text = tr(self.lang, "google_sync_status_signed_in", email=email)
+        elif effective_signed_in:
+            status_text = tr(self.lang, "google_sync_status_signed_in_generic")
+        else:
+            status_text = tr(self.lang, "google_sync_status_signed_out")
+        self.google_sync_status_label.setText(status_text)
         self.google_sync_backup_label.setText(
             tr(self.lang, "google_sync_last_upload", value=last_uploaded) if last_uploaded else ""
         )
@@ -1037,7 +1051,7 @@ class GoogleSyncDialog(QDialog):
         self.google_sync_token_label.setText(
             tr(self.lang, "google_token_path", value=token_path) if token_path else ""
         )
-        self.google_sign_out_btn.setEnabled(signed_in)
+        self.google_sign_out_btn.setEnabled(effective_signed_in)
 
     def get_data(self):
         return {
@@ -1231,12 +1245,15 @@ class GlobalSettingsDialog(QDialog):
         if tooltip is not None:
             self.rclone_update_btn.setToolTip(tooltip)
 
-    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None):
-        signed_in = bool(str(email).strip())
-        self.google_sync_status_label.setText(
-            tr(self.lang, "google_sync_status_signed_in", email=email)
-            if signed_in else tr(self.lang, "google_sync_status_signed_out")
-        )
+    def set_google_sync_status(self, email: str, last_uploaded: str = "", last_downloaded: str = "", restore_target: str = "", token_path: str = "", backup_exists: bool | None = None, signed_in: bool | None = None):
+        effective_signed_in = bool(str(email).strip()) if signed_in is None else bool(signed_in)
+        if effective_signed_in and str(email).strip():
+            status_text = tr(self.lang, "google_sync_status_signed_in", email=email)
+        elif effective_signed_in:
+            status_text = tr(self.lang, "google_sync_status_signed_in_generic")
+        else:
+            status_text = tr(self.lang, "google_sync_status_signed_out")
+        self.google_sync_status_label.setText(status_text)
         self.google_sync_backup_presence_label.setText(
             tr(self.lang, "google_backup_exists") if backup_exists is True else (tr(self.lang, "google_backup_missing") if backup_exists is False else "")
         )
