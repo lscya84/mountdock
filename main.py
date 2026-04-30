@@ -517,10 +517,18 @@ class LDriveApp:
             message = message + "\n\n" + tr(self.lang, "google_sync_restore_backup", path=result["backup_path"])
         QMessageBox.information(self.window, tr(self.lang, "google_sync"), message)
 
+    def _refresh_bulk_action_state(self, profiles=None):
+        if profiles is None:
+            profiles = self.config.get_profiles()
+        active_count = sum(1 for profile in profiles if profile["id"] in self.watchers)
+        self.window.set_bulk_buttons_enabled(active_count < len(profiles), active_count > 0)
+        self.window.update_overview(len(profiles), active_count, self.config.get("theme", "light"))
+        self._refresh_tray_profiles(profiles)
+
     def _setup_dashboards(self):
         self.window.clear_cards()
         profiles = self.config.get_profiles()
-        active_count = len(self.watchers)
+        active_count = sum(1 for profile in profiles if profile["id"] in self.watchers)
 
         if not profiles:
             self.window.show_empty_state()
@@ -537,9 +545,7 @@ class LDriveApp:
                 card.set_status("Connected")
             self.window.add_card(card)
 
-        self.window.set_bulk_buttons_enabled(active_count < len(profiles), active_count > 0)
-        self.window.update_overview(len(profiles), active_count, self.config.get("theme", "light"))
-        self._refresh_tray_profiles(profiles)
+        self._refresh_bulk_action_state(profiles)
 
     def _refresh_tray_profiles(self, profiles=None):
         if profiles is None:
@@ -646,12 +652,7 @@ class LDriveApp:
                 watcher.log_emitted.connect(self.window.append_log)
                 watcher.start()
                 self.watchers[pid] = watcher
-                self.window.update_overview(
-                    len(self.config.get_profiles()),
-                    len(self.watchers),
-                    self.config.get("theme", "light"),
-                )
-                self._refresh_tray_profiles()
+                self._refresh_bulk_action_state()
             else:
                 self.window.append_log(f"Mount Error: {self.engine.last_error}")
                 QMessageBox.critical(self.window, tr(self.lang, "mount_failed"), f"Rclone Error:\n\n{self.engine.last_error}")
@@ -661,12 +662,7 @@ class LDriveApp:
                 del self.watchers[pid]
             self.engine.unmount(profile["letter"])
             card.set_status("Disconnected")
-            self.window.update_overview(
-                len(self.config.get_profiles()),
-                len(self.watchers),
-                self.config.get("theme", "light"),
-            )
-            self._refresh_tray_profiles()
+            self._refresh_bulk_action_state()
 
     def _find_card(self, pid):
         for i in range(self.window.card_layout.count()):
@@ -918,15 +914,14 @@ class LDriveApp:
         dialog.close_btn.setEnabled(True)
         dialog.status_label.setText(installer_path)
         try:
-            self.app_updater.launch_installer(installer_path)
+            self.app_updater.schedule_installer_after_pid_exits(installer_path, os.getpid())
         except Exception as exc:
             QMessageBox.warning(self.window, tr(self.lang, "app_update_title"), str(exc))
             return
-        QMessageBox.information(
-            self.window,
-            tr(self.lang, "app_update_title"),
-            tr(self.lang, "app_update_installer_ready", path=installer_path),
-        )
+
+        dialog.accept()
+        self.window.append_log(f"Preparing app update installer: {installer_path}")
+        self.exit_app()
 
     def _refresh_remote_cache(self, rclone_path=None, conf_path=None):
         active_rclone_path = rclone_path or self.engine.rclone_path

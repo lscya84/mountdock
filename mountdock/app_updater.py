@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import tempfile
@@ -10,6 +11,18 @@ from mountdock import __version__
 
 GITHUB_LATEST = "https://api.github.com/repos/lscya84/mountdock/releases/latest"
 GITHUB_RELEASES_URL = "https://github.com/lscya84/mountdock/releases"
+
+
+def _hidden_subprocess_kwargs() -> dict:
+    if os.name != "nt":
+        return {}
+
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return {
+        "startupinfo": startupinfo,
+        "creationflags": subprocess.CREATE_NO_WINDOW,
+    }
 
 
 class AppUpdater:
@@ -71,6 +84,43 @@ class AppUpdater:
         if not path.exists():
             raise FileNotFoundError(f"Installer not found: {path}")
         subprocess.Popen([str(path)])
+
+    def schedule_installer_after_pid_exits(self, installer_path: str | Path, pid: int) -> None:
+        path = Path(installer_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Installer not found: {path}")
+
+        if os.name != "nt":
+            subprocess.Popen([str(path)])
+            return
+
+        helper_dir = Path(tempfile.gettempdir()) / "MountDockUpdates"
+        helper_dir.mkdir(parents=True, exist_ok=True)
+        helper_path = helper_dir / f"run_installer_after_exit_{pid}.bat"
+        helper_path.write_text(
+            "\r\n".join(
+                [
+                    "@echo off",
+                    "setlocal",
+                    f'set "TARGET_PID={int(pid)}"',
+                    f'set "INSTALLER={path}"',
+                    ":wait_loop",
+                    'tasklist /FI "PID eq %TARGET_PID%" | find "%TARGET_PID%" >nul',
+                    "if not errorlevel 1 (",
+                    "  timeout /t 1 /nobreak >nul",
+                    "  goto wait_loop",
+                    ")",
+                    'start "" "%INSTALLER%"',
+                    'del "%~f0"',
+                    "exit /b 0",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        subprocess.Popen(
+            ["cmd.exe", "/c", str(helper_path)],
+            **_hidden_subprocess_kwargs(),
+        )
 
     def get_releases_url(self) -> str:
         return GITHUB_RELEASES_URL

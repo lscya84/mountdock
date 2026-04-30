@@ -8,6 +8,7 @@ import threading
 from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QTextCursor
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -26,6 +27,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QStyle,
     QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
@@ -222,8 +224,45 @@ def resolve_drive_icon_key(profile_or_key, remote_type: str | None = None, remot
     return selected
 
 
-def make_drive_icon(profile_or_key, color: str, size: int = 18, remote_type: str | None = None, remote_name: str | None = None) -> QIcon:
+def _get_standard_icon(pixmap_name, size: int = 18) -> QIcon:
+    app = QApplication.instance()
+    if app is None or app.style() is None:
+        return QIcon()
+    try:
+        return app.style().standardIcon(pixmap_name)
+    except Exception:
+        return QIcon()
+
+
+def make_drive_icon(
+    profile_or_key,
+    color: str,
+    size: int = 18,
+    remote_type: str | None = None,
+    remote_name: str | None = None,
+    mounted: bool = False,
+) -> QIcon:
+    if mounted:
+        icon = _get_standard_icon(QStyle.StandardPixmap.SP_DriveHDIcon, size=size)
+        if not icon.isNull():
+            return icon
+        return _make_line_icon("server", color, size=size)
+
     icon_key = resolve_drive_icon_key(profile_or_key, remote_type=remote_type, remote_name=remote_name)
+    standard_map = {
+        "google_drive": QStyle.StandardPixmap.SP_DriveNetIcon,
+        "smb": QStyle.StandardPixmap.SP_DriveNetIcon,
+        "webdav": QStyle.StandardPixmap.SP_DriveNetIcon,
+        "onedrive": QStyle.StandardPixmap.SP_DriveNetIcon,
+        "dropbox": QStyle.StandardPixmap.SP_DriveNetIcon,
+        "s3": QStyle.StandardPixmap.SP_DriveNetIcon,
+        "generic_cloud": QStyle.StandardPixmap.SP_DriveNetIcon,
+        "generic_folder": QStyle.StandardPixmap.SP_DirIcon,
+    }
+    standard_icon = _get_standard_icon(standard_map.get(icon_key, QStyle.StandardPixmap.SP_DirIcon), size=size)
+    if not standard_icon.isNull():
+        return standard_icon
+
     choice_map = {item["key"]: item["icon"] for item in get_drive_icon_choices("en")}
     return _make_line_icon(choice_map.get(icon_key, "folder"), color, size=size)
 
@@ -402,7 +441,7 @@ class DriveCardWidget(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setMinimumHeight(38)
+        self.setMinimumHeight(42)
         self.setObjectName("")
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 1, 6, 1)
@@ -414,7 +453,7 @@ class DriveCardWidget(QFrame):
         layout.addWidget(self.status_dot, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.drive_icon_label = QLabel("")
-        self.drive_icon_label.setFixedSize(20, 20)
+        self.drive_icon_label.setFixedSize(24, 24)
         layout.addWidget(self.drive_icon_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.badge = QLabel(self.profile["letter"])
@@ -479,8 +518,8 @@ class DriveCardWidget(QFrame):
                 color = palette["accent"]
             button.setIcon(_make_line_icon(icon_kind, color))
 
-        drive_icon = make_drive_icon(self.profile, palette["ghost"], size=18)
-        pixmap = drive_icon.pixmap(18, 18)
+        drive_icon = make_drive_icon(self.profile, palette["ghost"], size=22, mounted=self.is_running)
+        pixmap = drive_icon.pixmap(22, 22)
         self.drive_icon_label.setPixmap(pixmap)
 
     def _on_toggle(self):
