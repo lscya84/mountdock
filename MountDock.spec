@@ -1,12 +1,26 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_submodules
+
+hiddenimports = []
+for package_name in [
+    'google',
+    'google.auth',
+    'google.oauth2',
+    'google_auth_oauthlib',
+    'googleapiclient',
+    'keyring',
+    'keyring.backends',
+]:
+    hiddenimports += collect_submodules(package_name)
+
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
     datas=[('assets', 'assets')],
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
