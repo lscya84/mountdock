@@ -38,6 +38,20 @@ It is an independent desktop app that makes terminal-heavy rclone workflows easi
 
 ---
 
+## 다운로드 / Download
+
+**KR**
+- 최신 릴리즈: <https://github.com/lscya84/mountdock/releases/latest>
+- 설치형 EXE: GitHub Releases의 `MountDock-Setup-vX.Y.Z.exe`
+- 포터블 ZIP: GitHub Releases의 `MountDock_Portable.zip`
+
+**EN**
+- Latest release: <https://github.com/lscya84/mountdock/releases/latest>
+- Installer EXE: `MountDock-Setup-vX.Y.Z.exe` from GitHub Releases
+- Portable ZIP: `MountDock_Portable.zip` from GitHub Releases
+
+---
+
 ## 프로젝트 성격 / Project Status
 
 **KR**  
