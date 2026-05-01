@@ -53,3 +53,37 @@ Name: "{autodesktop}\MountDock"; Filename: "{app}\MountDock.exe"; Tasks: desktop
 
 [Run]
 Filename: "{app}\MountDock.exe"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function GetWinFspInstallDir(var InstallDir: string): Boolean;
+begin
+  Result :=
+    RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\WinFsp', 'InstallDir', InstallDir) or
+    RegQueryStringValue(HKLM, 'SOFTWARE\WinFsp', 'InstallDir', InstallDir);
+end;
+
+function InitializeSetup(): Boolean;
+var
+  InstallDir: string;
+  Reply: Integer;
+begin
+  if GetWinFspInstallDir(InstallDir) then
+  begin
+    Result := True;
+    exit;
+  end;
+
+  Reply := MsgBox(
+    'MountDock requires WinFsp for Windows drive mounts.' + #13#10 + #13#10 +
+    'WinFsp was not detected on this PC.' + #13#10 +
+    'Install WinFsp first, then run the MountDock installer again.' + #13#10 + #13#10 +
+    'Open the WinFsp download page now?',
+    mbConfirmation,
+    MB_YESNO
+  );
+
+  if Reply = IDYES then
+    ShellExec('open', 'https://winfsp.dev/rel/', '', '', SW_SHOWNORMAL, ewNoWait, Reply);
+
+  Result := False;
+end;

@@ -4,6 +4,11 @@ import sys
 import webbrowser
 from pathlib import Path
 
+try:
+    import winreg
+except ImportError:  # pragma: no cover - non-Windows fallback
+    winreg = None
+
 from PyQt6.QtCore import QFileSystemWatcher, QSharedMemory, QTimer, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QStyle
@@ -98,6 +103,7 @@ class LDriveApp:
         self._refresh_remote_cache()
         self._refresh_rclone_conf_watch()
         self._setup_dashboards()
+        self._refresh_winfsp_state()
 
         if self.config.get("mount_on_launch"):
             self._mount_startup_profiles()
@@ -654,6 +660,10 @@ class LDriveApp:
             return
 
         if should_start:
+            if not self._ensure_winfsp_ready(interactive=True):
+                card.set_status("Disconnected")
+                return
+
             if self.is_admin:
                 self.window.append_log("[Blocked] 관리자 권한 실행 중이라 마운트를 차단했습니다.")
                 QMessageBox.warning(
@@ -712,6 +722,9 @@ class LDriveApp:
         return None
 
     def _mount_startup_profiles(self):
+        if not self._ensure_winfsp_ready(interactive=False):
+            return
+
         for profile in self.config.get_profiles():
             if profile.get("auto_mount"):
                 self.handle_toggle_mount(profile["id"], True)
@@ -1020,6 +1033,79 @@ class LDriveApp:
         except Exception:
             pass
         return sorted(used)
+
+    def _refresh_winfsp_state(self):
+        if self._has_winfsp():
+            self.window.set_warning_banner("")
+            return
+
+        message = tr(self.lang, "winfsp_missing_banner")
+        self.window.set_warning_banner(message)
+        self.window.append_log(f"[Warning] {message}")
+
+    def _ensure_winfsp_ready(self, interactive: bool) -> bool:
+        if self._has_winfsp():
+            self.window.set_warning_banner("")
+            return True
+
+        self._refresh_winfsp_state()
+        if not interactive:
+            return False
+
+        message = tr(self.lang, "winfsp_missing_prompt")
+        self.window.append_log(f"[Blocked] {message}")
+        reply = QMessageBox.question(
+            self.window,
+            tr(self.lang, "winfsp_missing_title"),
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self._open_winfsp_download_page()
+        return False
+
+    def _open_winfsp_download_page(self):
+        try:
+            webbrowser.open("https://winfsp.dev/rel/")
+        except Exception as exc:
+            QMessageBox.warning(self.window, tr(self.lang, "error"), str(exc))
+
+    def _has_winfsp(self) -> bool:
+        if os.name != "nt":
+            return True
+
+        install_dir = self._get_winfsp_install_dir()
+        if not install_dir:
+            return False
+
+        bin_dir = Path(install_dir) / "bin"
+        expected = ["winfsp-x64.dll", "winfsp-x86.dll", "winfsp-a64.dll"]
+        return any((bin_dir / name).exists() for name in expected)
+
+    def _get_winfsp_install_dir(self) -> str:
+        if winreg is not None:
+            reg_paths = [
+                r"SOFTWARE\WOW6432Node\WinFsp",
+                r"SOFTWARE\WinFsp",
+            ]
+            for subkey in reg_paths:
+                try:
+                    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, subkey) as key:
+                        value, _ = winreg.QueryValueEx(key, "InstallDir")
+                        if value:
+                            return str(value)
+                except OSError:
+                    continue
+
+        fallback_dirs = [
+            Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "WinFsp",
+            Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "WinFsp",
+        ]
+        for path in fallback_dirs:
+            if path.exists():
+                return str(path)
+        return ""
 
     def _acquire_single_instance(self):
         self.shared_memory = QSharedMemory("LDrive_SingleInstance")

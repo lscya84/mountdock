@@ -50,13 +50,37 @@ It is not an official rclone application; it is a desktop-focused front-end inte
 
 ---
 
+## 시스템 요구사항 / System Requirements
+
+**KR**
+- Windows 환경 전용 앱입니다.
+- 마운트 기능은 내부적으로 `rclone mount`를 사용합니다.
+- 따라서 **Windows에서 실제 마운트를 사용하려면 WinFsp가 필요합니다.**
+- WinFsp가 없으면 마운트 시 `cannot find winfsp`, `failed to mount FUSE fs` 같은 오류가 발생할 수 있습니다.
+- 단순히 문서를 읽거나 빌드 스크립트를 보는 것은 가능하지만, **실제 드라이브 마운트 기능은 WinFsp 없이 동작하지 않습니다.**
+
+**EN**
+- This app targets Windows.
+- Its mount workflow uses `rclone mount` internally.
+- Therefore, **WinFsp is required on Windows for actual mount operations.**
+- Without WinFsp, mounting may fail with errors such as `cannot find winfsp` or `failed to mount FUSE fs`.
+- You can still inspect the app or build scripts without it, but **the actual drive-mount feature will not work on Windows without WinFsp.**
+
+WinFsp:
+- <https://winfsp.dev/>
+- <https://winfsp.dev/rel/>
+
+---
+
 ## 포터블 배포 / Portable Distribution
 
 **KR**  
 Windows 배포에는 PyInstaller `onedir` 구성을 권장합니다.
+포터블 ZIP도 **WinFsp를 포함하지 않으며**, 사용자는 먼저 WinFsp를 설치해야 실제 마운트를 사용할 수 있습니다.
 
 **EN**  
 For Windows distribution, a PyInstaller `onedir` build is recommended.
+The portable ZIP **does not bundle WinFsp**, so users must install WinFsp first to use actual mount operations.
 
 예시 구조 / Example layout:
 
@@ -89,7 +113,7 @@ dist/release/MountDock-Setup-vX.Y.Z.exe
 권장 릴리즈 구성 / Recommended release set:
 
 - `MountDock-Setup-vX.Y.Z.exe` → 일반 사용자용 설치형
-- `MountDock_Portable.zip` → 고급 사용자/테스트용 포터블 onedir
+- `MountDock_Portable.zip` → 고급 사용자/테스트용 포터블 onedir (WinFsp 선설치 필요)
 
 ---
 
@@ -208,8 +232,14 @@ Troubleshooting:
 **KR**  
 먼저 가상환경에 의존성을 설치하세요.
 
+추가로, **앱의 실제 마운트 동작을 테스트하려면 WinFsp가 설치되어 있어야 합니다.**
+코드상 MountDock은 `rclone mount`를 직접 호출합니다.
+
 **EN**  
 Install dependencies into the virtual environment first.
+
+Also, **WinFsp must be installed if you want to test actual mount behavior.**
+In code, MountDock directly invokes `rclone mount`.
 
 ```powershell
 .venv\Scripts\pip install -r requirements.txt
@@ -237,6 +267,7 @@ python release_installer.py
 ## 릴리즈 체크리스트 / Release Checklist
 
 - [ ] **KR** Windows에서 빌드 확인 / **EN** Confirm build on Windows
+- [ ] **KR** 테스트 PC에 WinFsp 설치 여부 확인 / **EN** Confirm WinFsp is installed on the Windows test machine
 - [ ] **KR** 설치형 EXE 생성 확인 / **EN** Verify installer EXE generation
 - [ ] **KR** 앱 내 MountDock 업데이트 확인/설치 버튼 동작 확인 / **EN** Verify in-app MountDock update check/install flow
 - [ ] **KR** 트레이 동작 확인 / **EN** Verify tray behavior

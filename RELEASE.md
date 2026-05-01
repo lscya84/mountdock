@@ -34,6 +34,8 @@ release_windows.bat v0.1.4
 
 ## Notes
 
+- Actual mount testing on Windows requires **WinFsp**, because MountDock uses `rclone mount` internally.
+- Without WinFsp, mount attempts can fail with messages such as `cannot find winfsp` or `failed to mount FUSE fs`.
 - `release_installer.py` requires **Inno Setup 6** on Windows.
 - Installer packaging wraps the stable `onedir` output rather than replacing it.
 - If needed, set a custom Inno Setup compiler path with `INNO_SETUP_COMPILER`.
@@ -61,6 +63,7 @@ Optional:
 - In-app installer download/launch works
 - Installer launches correctly
 - Portable ZIP extracts and runs correctly
+- WinFsp is installed on the test machine before validating mount behavior
 - Tray behavior works
 - Settings dialog works
 - Google sign-in / backup / restore works
