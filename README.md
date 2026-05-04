@@ -17,23 +17,33 @@ It is an independent desktop app that makes terminal-heavy rclone workflows easi
 **KR**
 - 여러 rclone 마운트 프로필 관리
 - Windows UI에서 연결 / 해제
+- 드라이브 카드 호버 강조 및 더블클릭으로 Windows 탐색기 열기
 - 트레이 시작, 트레이 최소화, 트레이 복원
 - 앱 시작 시 자동 마운트
 - 모두 연결 / 모두 해제 지원
 - 포터블 환경 친화적인 config / log / rclone 경로 처리
 - `rclone.conf` 및 `rclone listremotes` 기반 리모트 감지
 - 진행률이 보이는 내장 rclone 업데이트 기능
+- 마운트 중 rclone 업데이트 시 자동 해제 / 업데이트 / 재마운트 또는 다음 실행 시 지연 적용
+- rclone / MountDock 업데이트가 있을 때 설정 버튼 배지 표시
+- Google Drive 기반 암호화 `rclone.conf` 백업 / 복원
+- 내장 rclone config 실행 UI
 - 한국어 / English UI 지원
 
 **EN**
 - Manage multiple rclone mount profiles
 - Mount and unmount from a Windows desktop UI
+- Hover-highlight drive cards and open mounted drives in Windows Explorer on double-click
 - Start to tray, minimize to tray, restore from tray
 - Auto-mount on app launch
 - Bulk mount / bulk unmount actions
 - Portable-friendly config / log / rclone path handling
 - Remote discovery via `rclone.conf` and `rclone listremotes`
 - Built-in rclone updater with progress dialog
+- While drives are mounted, rclone updates can unmount, update, and remount automatically, or be deferred until the next app start
+- Show a badge on the Settings button when an rclone or MountDock update is available
+- Encrypted `rclone.conf` backup / restore via Google Drive
+- Built-in UI for interactive rclone config
 - Korean / English UI support
 
 ---
@@ -150,6 +160,26 @@ dist/release/MountDock-Setup-vX.Y.Z.exe
   - bundled app directory
   - `%APPDATA%\rclone\rclone.conf`
   - `%USERPROFILE%\.config\rclone\rclone.conf`
+
+---
+
+## 앱 내 업데이트 동작 / In-App Update Behavior
+
+**KR**
+- MountDock은 GitHub Releases를 기준으로 **MountDock 업데이트**를 확인할 수 있습니다.
+- `rclone.exe`는 앱 안에서 직접 업데이트할 수 있습니다.
+- 이미 드라이브가 마운트된 상태에서 rclone 업데이트를 누르면, 안내 후 다음 두 가지 흐름 중 하나를 선택할 수 있습니다:
+  - 지금 마운트를 해제하고 업데이트한 뒤 자동으로 다시 마운트
+  - 업데이트를 미루고 다음에 앱을 다시 실행할 때 자동 적용
+- 보류된 rclone 업데이트가 있거나 새 앱/rclone 업데이트가 감지되면 상단 **설정 버튼에 배지**가 표시됩니다.
+
+**EN**
+- MountDock can check for **MountDock updates** from GitHub Releases.
+- `rclone.exe` can be updated directly inside the app.
+- If you trigger an rclone update while drives are already mounted, MountDock lets you choose between:
+  - unmount now, update, and remount automatically
+  - defer the update and apply it automatically on the next app start
+- When a deferred rclone update exists, or when a new app/rclone update is available, a **badge is shown on the Settings button**.
 
 ---
 
@@ -289,6 +319,9 @@ python release_installer.py
 - [ ] **KR** 모두 연결 / 모두 해제 동작 확인 / **EN** Verify bulk mount / unmount actions
 - [ ] **KR** 언어 전환 확인 / **EN** Verify language switching
 - [ ] **KR** rclone 업데이트 모달 확인 / **EN** Verify rclone updater behavior
+- [ ] **KR** 마운트 중 rclone 업데이트 시 해제 → 업데이트 → 재마운트 흐름 확인 / **EN** Verify mounted-drive rclone update flow: unmount → update → remount
+- [ ] **KR** rclone 업데이트 보류 후 다음 실행 시 자동 적용 확인 / **EN** Verify deferred rclone update is applied on the next app start
+- [ ] **KR** 앱/rclone 업데이트 감지 시 설정 버튼 배지 표시 확인 / **EN** Verify the Settings button badge appears when app/rclone updates are available
 - [ ] **KR** 포터블 경로 동작 확인 / **EN** Verify portable path behavior
 - [ ] **KR** Google OAuth client JSON 선택 시 `.mountdock/google_client_secret.json`로 가져오는지 확인 / **EN** Verify selected Google OAuth client JSON is imported into `.mountdock/google_client_secret.json`
 - [ ] **KR** Google OAuth client JSON 선택 후 로그인 확인 / **EN** Verify Google sign-in after selecting OAuth client JSON

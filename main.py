@@ -2,6 +2,7 @@ import ctypes
 import os
 import subprocess
 import sys
+import time
 import webbrowser
 from pathlib import Path
 
@@ -25,6 +26,7 @@ from mountdock.sync_service import SyncService, SyncServiceError
 from mountdock.ui_components import (
     AppUpdateDialog,
     AppUpdateWorker,
+    BulkActionDialog,
     DriveCardWidget,
     DriveSettingsDialog,
     GlobalSettingsDialog,
@@ -128,14 +130,73 @@ class LDriveApp:
         self.window.closeEvent = self._on_close_event
 
     def handle_mount_all(self):
-        for profile in self.config.get_profiles():
-            if profile["id"] not in self.watchers:
-                self.handle_toggle_mount(profile["id"], True)
+        targets = [profile for profile in self.config.get_profiles() if profile["id"] not in self.watchers]
+        if not targets:
+            return
+
+        dialog = BulkActionDialog(
+            tr(self.lang, "bulk_mount_title"),
+            tr(self.lang, "bulk_mount_note"),
+            self.lang,
+            self.window,
+        )
+        QTimer.singleShot(0, lambda: self._run_bulk_toggle(dialog, targets, True))
+        dialog.exec()
 
     def handle_unmount_all(self):
-        for profile in list(self.config.get_profiles()):
-            if profile["id"] in self.watchers:
-                self.handle_toggle_mount(profile["id"], False)
+        targets = [profile for profile in self.config.get_profiles() if profile["id"] in self.watchers]
+        if not targets:
+            return
+
+        dialog = BulkActionDialog(
+            tr(self.lang, "bulk_unmount_title"),
+            tr(self.lang, "bulk_unmount_note"),
+            self.lang,
+            self.window,
+        )
+        QTimer.singleShot(0, lambda: self._run_bulk_toggle(dialog, targets, False))
+        dialog.exec()
+
+    def _run_bulk_toggle(self, dialog, profiles, should_start: bool):
+        total = len(profiles)
+        for index, profile in enumerate(profiles, start=1):
+            name = profile.get("volname") or profile.get("remote") or profile.get("letter") or profile.get("id")
+            dialog.set_item(index, total, name)
+            self.app.processEvents()
+
+            self.handle_toggle_mount(profile["id"], should_start)
+            status = self._wait_for_bulk_status(profile["id"], should_start)
+            dialog.set_status(status)
+            self.app.processEvents()
+
+        dialog.mark_done(total)
+
+    def _wait_for_bulk_status(self, pid, should_start: bool, timeout_ms: int = 4000) -> str:
+        end = time.monotonic() + (timeout_ms / 1000)
+        fallback = tr(self.lang, "connect") if should_start else tr(self.lang, "disconnect")
+
+        while time.monotonic() < end:
+            self.app.processEvents()
+            card = self._find_card(pid)
+            if not card:
+                return fallback
+
+            status = getattr(card, "current_status", "") or fallback
+            if should_start:
+                if status in {"Connected", "Admin Block", "Disconnected"}:
+                    return status
+                if pid in self.watchers:
+                    return status
+            else:
+                if status == "Disconnected" and pid not in self.watchers:
+                    return status
+
+            time.sleep(0.05)
+
+        card = self._find_card(pid)
+        if card:
+            return getattr(card, "current_status", fallback) or fallback
+        return fallback
 
     def _show_window(self):
         self.window.showNormal()

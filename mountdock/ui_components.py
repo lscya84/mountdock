@@ -361,6 +361,7 @@ class DriveCardWidget(QFrame):
         self.profile = profile
         self.lang = lang
         self.is_running = False
+        self.current_status = "Disconnected"
         self.current_theme = "light"
         self.setObjectName("DriveCard")
         self._init_ui()
@@ -472,6 +473,7 @@ class DriveCardWidget(QFrame):
         super().mouseDoubleClickEvent(event)
 
     def set_status(self, status):
+        self.current_status = status
         if status == "Connected":
             self.toggle_btn.icon_kind = "stop"
             self.toggle_btn.setToolTip(tr(self.lang, "disconnect"))
@@ -960,6 +962,66 @@ class AppUpdateDialog(QDialog):
         buttons.addStretch()
         buttons.addWidget(self.close_btn)
         layout.addLayout(buttons)
+
+
+class BulkActionDialog(QDialog):
+    def __init__(self, title: str, note: str, lang="en", parent=None):
+        super().__init__(parent)
+        self.lang = lang
+        self.setObjectName("SheetDialog")
+        self.setWindowTitle(title)
+        self.setFixedWidth(440)
+        self._init_ui(title, note)
+
+    def _init_ui(self, title: str, note: str):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(14)
+        layout.setContentsMargins(18, 18, 18, 18)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("CardTitle")
+        title_label.setWordWrap(True)
+        layout.addWidget(title_label)
+
+        note_label = QLabel(note)
+        note_label.setWordWrap(True)
+        layout.addWidget(note_label)
+
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        layout.addWidget(self.progress)
+
+        self.status_label = QLabel("")
+        self.status_label.setWordWrap(True)
+        layout.addWidget(self.status_label)
+
+        self.detail_label = QLabel("")
+        self.detail_label.setWordWrap(True)
+        layout.addWidget(self.detail_label)
+
+        self.close_btn = QPushButton(tr(self.lang, "close"))
+        self.close_btn.setObjectName("GhostBtn")
+        self.close_btn.setEnabled(False)
+        self.close_btn.clicked.connect(self.accept)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        buttons.addWidget(self.close_btn)
+        layout.addLayout(buttons)
+
+    def set_item(self, current: int, total: int, name: str):
+        percent = 0 if total <= 0 else int(((current - 1) * 100) / total)
+        self.progress.setValue(max(0, min(100, percent)))
+        self.status_label.setText(tr(self.lang, "bulk_action_progress", current=current, total=total, name=name))
+
+    def set_status(self, status: str):
+        self.detail_label.setText(tr(self.lang, "bulk_action_status", status=status))
+
+    def mark_done(self, count: int):
+        self.progress.setValue(100)
+        self.status_label.setText(tr(self.lang, "bulk_action_done", done=count))
+        self.close_btn.setEnabled(True)
 
 
 class RcloneUpdateDialog(QDialog):
