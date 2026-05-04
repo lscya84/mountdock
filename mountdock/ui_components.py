@@ -5,7 +5,7 @@ import subprocess
 import sys
 import threading
 
-from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal, QThread
+from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QTextCursor
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -1022,6 +1022,7 @@ class BulkActionDialog(QDialog):
         self.progress.setValue(100)
         self.status_label.setText(tr(self.lang, "bulk_action_done", done=count))
         self.close_btn.setEnabled(True)
+        QTimer.singleShot(500, self.accept)
 
 
 class RcloneUpdateDialog(QDialog):
