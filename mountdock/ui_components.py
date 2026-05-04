@@ -354,6 +354,7 @@ class DriveCardWidget(QFrame):
     toggle_requested = pyqtSignal(str, bool)
     edit_requested = pyqtSignal(str)
     delete_requested = pyqtSignal(str)
+    open_requested = pyqtSignal(str)
 
     def __init__(self, profile, lang="en"):
         super().__init__()
@@ -366,7 +367,9 @@ class DriveCardWidget(QFrame):
 
     def _init_ui(self):
         self.setMinimumHeight(42)
-        self.setObjectName("")
+        self.setObjectName("DriveCard")
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 1, 6, 1)
         layout.setSpacing(6)
@@ -448,6 +451,25 @@ class DriveCardWidget(QFrame):
 
     def _on_toggle(self):
         self.toggle_requested.emit(self.profile["id"], not self.is_running)
+
+    def enterEvent(self, event):
+        self.setProperty("hovered", True)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setProperty("hovered", False)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        super().leaveEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.open_requested.emit(self.profile["id"])
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
     def set_status(self, status):
         if status == "Connected":

@@ -22,6 +22,11 @@ QDialog#SheetDialog {
     border-radius: 14px;
 }
 
+QFrame#DriveCard[hovered="true"] {
+    background: rgba(35, 56, 84, 0.96);
+    border: 1px solid rgba(120, 176, 255, 0.34);
+}
+
 QScrollArea#CardScroll,
 QWidget#DriveListHost {
     background: transparent;

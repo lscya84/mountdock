@@ -1,5 +1,6 @@
 import ctypes
 import os
+import subprocess
 import sys
 import webbrowser
 from pathlib import Path
@@ -548,6 +549,7 @@ class LDriveApp:
             card.toggle_requested.connect(self.handle_toggle_mount)
             card.edit_requested.connect(self.handle_edit_drive)
             card.delete_requested.connect(self.handle_delete_drive)
+            card.open_requested.connect(self.handle_open_drive)
             if profile["id"] in self.watchers:
                 card.set_status("Connected")
             self.window.add_card(card)
@@ -652,6 +654,23 @@ class LDriveApp:
             self.handle_toggle_mount(pid, False)
         self.config.delete_profile(pid)
         self._setup_dashboards()
+
+    def handle_open_drive(self, pid):
+        profile = next((p for p in self.config.get_profiles() if p["id"] == pid), None)
+        if not profile:
+            return
+
+        drive_path = f"{profile['letter']}:\\"
+        if not os.path.exists(drive_path):
+            self.window.append_log(f"Drive open skipped: not mounted ({drive_path})")
+            QMessageBox.information(self.window, "MountDock", f"드라이브가 아직 연결되지 않았습니다.\n\n{drive_path}")
+            return
+
+        try:
+            subprocess.Popen(["explorer", drive_path])
+        except Exception as exc:
+            self.window.append_log(f"Drive open failed: {exc}")
+            QMessageBox.warning(self.window, tr(self.lang, "error"), str(exc))
 
     def handle_toggle_mount(self, pid, should_start):
         profile = next((p for p in self.config.get_profiles() if p["id"] == pid), None)
