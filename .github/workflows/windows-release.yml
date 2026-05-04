@@ -118,3 +118,39 @@ jobs:
           make_latest: true
           draft: false
           prerelease: false
+
+      - name: Keep assets only for latest 3 releases
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $repo = '${{ github.repository }}'
+          $releases = gh api "repos/$repo/releases?per_page=100" | ConvertFrom-Json
+          if (-not $releases) {
+            Write-Host 'No releases found.'
+            exit 0
+          }
+
+          $kept = 0
+          foreach ($release in $releases) {
+            if ($release.draft -or $release.prerelease) {
+              continue
+            }
+
+            $kept += 1
+            if ($kept -le 3) {
+              Write-Host "Keeping assets for release $($release.tag_name)"
+              continue
+            }
+
+            if (-not $release.assets) {
+              Write-Host "No assets to delete for $($release.tag_name)"
+              continue
+            }
+
+            foreach ($asset in $release.assets) {
+              Write-Host "Deleting asset $($asset.name) from $($release.tag_name)"
+              gh api --method DELETE "repos/$repo/releases/assets/$($asset.id)"
+            }
+          }
