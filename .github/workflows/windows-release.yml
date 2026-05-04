@@ -1,0 +1,120 @@
+name: Windows Release Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version like v0.1.12 (optional for manual runs)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    env:
+      PYTHONUTF8: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $inputVersion = '${{ github.event.inputs.version }}'
+          if ($inputVersion) {
+            $version = $inputVersion.Trim()
+          } elseif ('${{ github.ref_type }}' -eq 'tag') {
+            $version = '${{ github.ref_name }}'
+          } else {
+            $version = "v0.0.0-ci.${{ github.run_number }}"
+          }
+
+          $plain = $version.TrimStart('v')
+          "tag=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "plain=$plain" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "MOUNTDOCK_VERSION=$plain" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build onedir app
+        shell: pwsh
+        run: |
+          python build.py --mode onedir
+
+      - name: Create portable ZIP
+        shell: pwsh
+        run: |
+          python release_portable.py
+
+      - name: Create installer EXE
+        shell: pwsh
+        run: |
+          python release_installer.py ${{ steps.version.outputs.tag }}
+
+      - name: Create SHA256 files
+        shell: pwsh
+        run: |
+          $files = @(
+            'dist/release/MountDock-Setup-v${{ steps.version.outputs.plain }}.exe',
+            'dist/release/MountDock_Portable.zip'
+          )
+
+          foreach ($file in $files) {
+            $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLower()
+            $name = Split-Path $file -Leaf
+            "$hash  $name" | Set-Content -Path "$file.sha256" -Encoding ascii
+          }
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MountDock-${{ steps.version.outputs.plain }}-windows
+          path: |
+            dist/release/MountDock-Setup-v${{ steps.version.outputs.plain }}.exe
+            dist/release/MountDock-Setup-v${{ steps.version.outputs.plain }}.exe.sha256
+            dist/release/MountDock_Portable.zip
+            dist/release/MountDock_Portable.zip.sha256
+          if-no-files-found: error
+
+      - name: Upload release assets
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            dist/release/MountDock-Setup-v${{ steps.version.outputs.plain }}.exe
+            dist/release/MountDock-Setup-v${{ steps.version.outputs.plain }}.exe.sha256
+            dist/release/MountDock_Portable.zip
+            dist/release/MountDock_Portable.zip.sha256
+          overwrite_files: true
+          make_latest: true
+          draft: false
+          prerelease: false
