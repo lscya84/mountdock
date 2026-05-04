@@ -63,6 +63,7 @@ class ConfigManager:
             "google_client_secret_path": "",
             "google_token_path": ".mountdock/google_drive_token.json",
             "vault_cache_enabled": True,
+            "rclone_update_pending_version": "",
             "device_id": str(uuid.uuid4()),
         }
         self.load_config()

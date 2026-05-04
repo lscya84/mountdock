@@ -105,6 +105,8 @@ class LDriveApp:
         self._refresh_rclone_conf_watch()
         self._setup_dashboards()
         self._refresh_winfsp_state()
+        self._apply_pending_rclone_update_on_startup()
+        self._refresh_update_badge()
 
         if self.config.get("mount_on_launch"):
             self._mount_startup_profiles()
@@ -226,6 +228,48 @@ class LDriveApp:
         self._refresh_rclone_conf_watch()
         if refresh_remotes:
             self._refresh_remote_cache()
+        self._refresh_update_badge()
+
+    def _refresh_update_badge(self):
+        has_pending = bool(str(self.config.get("rclone_update_pending_version", "")).strip())
+
+        rclone_update_available = False
+        current_path = self.config.resolve_rclone_path()
+        installed_rclone = self.rclone_updater.get_installed_version(current_path)
+        if installed_rclone:
+            try:
+                latest_rclone = self.rclone_updater.get_latest_version()
+                rclone_update_available = self.rclone_updater.is_update_available(installed_rclone, latest_rclone)
+            except Exception:
+                rclone_update_available = False
+
+        app_update_available = False
+        try:
+            app_info = self._get_app_version_info()
+            app_update_available = bool(app_info.get("update_available", False))
+        except Exception:
+            app_update_available = False
+
+        self.window.set_settings_badge(has_pending or rclone_update_available or app_update_available)
+
+    def _apply_pending_rclone_update_on_startup(self):
+        pending_version = str(self.config.get("rclone_update_pending_version", "")).strip()
+        if not pending_version:
+            return
+
+        if self.watchers:
+            return
+
+        self.window.append_log(tr(self.lang, "rclone_update_pending_start"))
+        target_dir = self.config.get_rclone_target_dir(self.config.get("rclone_path", ""))
+        try:
+            result = self.rclone_updater.download_and_install(target_dir, pending_version)
+            if result.get("locked_fallback"):
+                raise RuntimeError(tr(self.lang, "rclone_locked", path=result["path"]))
+            self.config.set("rclone_update_pending_version", "")
+            self.window.append_log(tr(self.lang, "rclone_update_pending_done"))
+        except Exception as exc:
+            self.window.append_log(tr(self.lang, "rclone_update_pending_failed", message=str(exc)))
 
     def _build_sync_service(self, data=None):
         secret_path = self.config.resolve_google_client_secret_path((data or {}).get("google_client_secret_path"))
@@ -763,25 +807,50 @@ class LDriveApp:
                 )
                 info = self._get_rclone_version_info()
                 dialog.set_rclone_version_status(info["label"], info["update_available"], info["tooltip"])
+                self._refresh_update_badge()
                 return
+
+            remount_profile_ids = []
+            if self.watchers:
+                reply = QMessageBox.question(
+                    self.window,
+                    tr(self.lang, "rclone_update_title"),
+                    tr(self.lang, "rclone_update_mount_prompt"),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes,
+                )
+                if reply == QMessageBox.StandardButton.No:
+                    self.config.set("rclone_update_pending_version", latest_version)
+                    self._refresh_update_badge()
+                    QMessageBox.information(
+                        self.window,
+                        tr(self.lang, "rclone_update_title"),
+                        tr(self.lang, "rclone_update_deferred"),
+                    )
+                    return
+
+                remount_profile_ids = list(self.watchers.keys())
+                for pid in remount_profile_ids:
+                    self.handle_toggle_mount(pid, False)
 
             update_dialog = RcloneUpdateDialog(installed_version, latest_version, self.lang, self.window)
             worker = RcloneUpdateWorker(self.rclone_updater, target_dir, latest_version)
             self._active_rclone_worker = worker
             worker.progress_changed.connect(update_dialog.set_progress)
-            worker.finished_with_result.connect(lambda result: self._on_rclone_update_finished(dialog, update_dialog, data, result))
-            worker.failed.connect(lambda message: self._on_rclone_update_failed(dialog, update_dialog, message))
+            worker.finished_with_result.connect(lambda result, remount_ids=remount_profile_ids: self._on_rclone_update_finished(dialog, update_dialog, data, result, remount_ids))
+            worker.failed.connect(lambda message, remount_ids=remount_profile_ids: self._on_rclone_update_failed(dialog, update_dialog, message, remount_ids))
             worker.start()
             update_dialog.exec()
         except Exception as exc:
             self.window.append_log(f"rclone update failed: {exc}")
             QMessageBox.critical(self.window, tr(self.lang, "rclone_update_title"), str(exc))
 
-    def _on_rclone_update_finished(self, dialog, update_dialog, data, result):
+    def _on_rclone_update_finished(self, dialog, update_dialog, data, result, remount_profile_ids=None):
         installed = result["path"]
         relative_path = data.get("rclone_path", "").strip()
         if not relative_path:
             self.config.set("rclone_path", str(installed))
+        self.config.set("rclone_update_pending_version", "")
         self.engine.set_paths(
             self.config.resolve_rclone_path(str(installed)),
             self.config.resolve_rclone_conf_path(data.get("rclone_conf_path", "")),
@@ -796,11 +865,21 @@ class LDriveApp:
         dialog.set_rclone_version_status(info["label"], info["update_available"], info["tooltip"])
         update_dialog.mark_done(message)
         self.window.append_log(f"rclone updated: {installed}")
+        if remount_profile_ids:
+            self.window.append_log(tr(self.lang, "rclone_update_remounting"))
+            for pid in remount_profile_ids:
+                self.handle_toggle_mount(pid, True)
+        self._refresh_update_badge()
         self._active_rclone_worker = None
 
-    def _on_rclone_update_failed(self, dialog, update_dialog, message):
+    def _on_rclone_update_failed(self, dialog, update_dialog, message, remount_profile_ids=None):
         self.window.append_log(f"rclone update failed: {message}")
         update_dialog.mark_failed(message)
+        if remount_profile_ids:
+            self.window.append_log(tr(self.lang, "rclone_update_remounting"))
+            for pid in remount_profile_ids:
+                self.handle_toggle_mount(pid, True)
+        self._refresh_update_badge()
         self._active_rclone_worker = None
 
     def _handle_rclone_config(self, data):
@@ -898,6 +977,7 @@ class LDriveApp:
         info = self._get_app_version_info()
         dialog.set_app_version_status(info["label"], info["update_available"], info["tooltip"], info["download_url"])
         dialog.set_app_installer_url(info.get("installer_url", ""))
+        self._refresh_update_badge()
 
         if info["latest_version"] and info["update_available"]:
             message = tr(
@@ -947,6 +1027,7 @@ class LDriveApp:
         info = self._get_app_version_info()
         dialog.set_app_version_status(info["label"], info["update_available"], info["tooltip"], info["download_url"])
         dialog.set_app_installer_url(info.get("installer_url", ""))
+        self._refresh_update_badge()
         self._run_app_update_download(info)
 
     def _run_app_update_download(self, info: dict):

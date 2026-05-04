@@ -1586,6 +1586,7 @@ class LDriveMainWindow(QMainWindow):
         super().__init__()
         self.lang = lang
         self.current_theme = "light"
+        self.settings_badge_visible = False
         self.setWindowTitle(tr(self.lang, "app_title"))
         self.setMinimumSize(460, 330)
         self.resize(500, 360)
@@ -1759,14 +1760,23 @@ class LDriveMainWindow(QMainWindow):
         self._retranslate_top_bar()
         self._refresh_brand_icon()
 
+    def set_settings_badge(self, visible: bool):
+        self.settings_badge_visible = bool(visible)
+        self._retranslate_top_bar()
+
     def _retranslate_top_bar(self):
         self.title_label.setText(tr(self.lang, "app_title"))
         self.mount_all_btn.setText(tr(self.lang, "mount_all"))
         self.mount_all_btn.setToolTip(tr(self.lang, "mount_all"))
         self.unmount_all_btn.setText(tr(self.lang, "unmount_all"))
         self.unmount_all_btn.setToolTip(tr(self.lang, "unmount_all"))
-        self.settings_btn.setText(tr(self.lang, "settings_title"))
-        self.settings_btn.setToolTip(tr(self.lang, "settings_title"))
+        settings_text = tr(self.lang, "settings_title")
+        if self.settings_badge_visible:
+            settings_text = f"{settings_text} ●"
+            self.settings_btn.setToolTip(f"{tr(self.lang, 'settings_title')} ({tr(self.lang, 'settings_update_badge')})")
+        else:
+            self.settings_btn.setToolTip(tr(self.lang, "settings_title"))
+        self.settings_btn.setText(settings_text)
         self.add_btn.setText(tr(self.lang, "add"))
         self.add_btn.setToolTip(tr(self.lang, "add"))
 
