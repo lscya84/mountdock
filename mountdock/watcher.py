@@ -16,6 +16,20 @@ DRIVE_NO_ROOT_DIR = 1
 ACCESS_PROBE_TIMEOUT_SECONDS = 3
 
 
+def _hidden_subprocess_kwargs():
+    if os.name != "nt":
+        return {}
+    startupinfo_class = getattr(subprocess, "STARTUPINFO", None)
+    if startupinfo_class is None:
+        return {}
+    startupinfo = startupinfo_class()
+    startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
+    return {
+        "creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        "startupinfo": startupinfo,
+    }
+
+
 class LDriveWatcher(QThread):
     status_changed = pyqtSignal(str)
     log_emitted = pyqtSignal(str)
@@ -142,6 +156,7 @@ class LDriveWatcher(QThread):
                 text=True,
                 timeout=ACCESS_PROBE_TIMEOUT_SECONDS,
                 check=True,
+                **_hidden_subprocess_kwargs(),
             )
             return True
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
