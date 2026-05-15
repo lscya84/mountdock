@@ -1,6 +1,7 @@
 import ctypes
 import logging
 import os
+import subprocess
 
 import psutil
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -12,6 +13,7 @@ logger = logging.getLogger("Watcher")
 
 DRIVE_UNKNOWN = 0
 DRIVE_NO_ROOT_DIR = 1
+ACCESS_PROBE_TIMEOUT_SECONDS = 3
 
 
 class LDriveWatcher(QThread):
@@ -97,16 +99,17 @@ class LDriveWatcher(QThread):
         return self.engine.is_process_alive(self.drive_letter) and self._check_drive_ready()
 
     def _check_drive_ready(self) -> bool:
-        drive_type = self._get_drive_type()
-        if drive_type not in (DRIVE_UNKNOWN, DRIVE_NO_ROOT_DIR):
-            return True
+        if not self._check_drive_exists():
+            return False
 
-        if self._check_drive_exists():
+        drive_type = self._get_drive_type()
+        if drive_type in (DRIVE_UNKNOWN, DRIVE_NO_ROOT_DIR):
             try:
                 return os.path.isdir(self.drive_path)
             except OSError:
                 return False
-        return False
+
+        return self._probe_drive_access()
 
     def _check_drive_exists(self) -> bool:
         if os.path.exists(self.drive_path):
@@ -124,6 +127,25 @@ class LDriveWatcher(QThread):
             return ctypes.windll.kernel32.GetDriveTypeW(self.drive_path)
         except Exception:
             return DRIVE_UNKNOWN
+
+    def _probe_drive_access(self) -> bool:
+        if os.name != "nt":
+            try:
+                return os.path.isdir(self.drive_path)
+            except OSError:
+                return False
+
+        try:
+            subprocess.run(
+                ["cmd", "/d", "/c", f"dir {self.drive_path} >nul 2>nul"],
+                capture_output=True,
+                text=True,
+                timeout=ACCESS_PROBE_TIMEOUT_SECONDS,
+                check=True,
+            )
+            return True
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+            return False
 
     def _handle_reconnect(self):
         backoff = 2
